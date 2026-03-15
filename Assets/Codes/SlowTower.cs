@@ -261,3 +261,4 @@ public class SlowTower : MonoBehaviour
         Gizmos.DrawLine(transform.position, transform.position + rightBoundary);
     }
 }
+

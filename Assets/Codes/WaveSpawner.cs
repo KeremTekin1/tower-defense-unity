@@ -1,5 +1,5 @@
+ï»¿using System.Collections;
 using UnityEngine;
-using System.Collections;
 using UnityEngine.SceneManagement;
 
 public class WaveSpawner : MonoBehaviour
@@ -23,6 +23,9 @@ public class WaveSpawner : MonoBehaviour
     public static int enemiesKilled = 0;
 
     private int aliveEnemies = 0;
+    private int[] nextWaveEnemyTypes;
+
+    public int AliveEnemies => aliveEnemies;
 
     private void Awake()
     {
@@ -36,56 +39,56 @@ public class WaveSpawner : MonoBehaviour
 
         if (enemyPrefab == null)
         {
-            Debug.LogError("WaveSpawner: enemyPrefab atanmadý.");
+            Debug.LogError("WaveSpawner: enemyPrefab atanmadÄ±.");
             return;
         }
 
         if (spawnPoint == null)
         {
-            Debug.LogError("WaveSpawner: spawnPoint atanmadý.");
+            Debug.LogError("WaveSpawner: spawnPoint atanmadÄ±.");
             return;
         }
 
         if (waypoints == null || waypoints.Length == 0)
         {
-            Debug.LogError("WaveSpawner: waypoints boþ.");
+            Debug.LogError("WaveSpawner: waypoints boÅŸ.");
             return;
         }
 
+        nextWaveEnemyTypes = GenerateWaveEnemyTypes(1);
         StartCoroutine(WaveRoutine());
     }
 
-    IEnumerator WaveRoutine()
+    private IEnumerator WaveRoutine()
     {
         while (true)
         {
             currentWave++;
             nextWaveCountdown = 0f;
 
-            int enemiesThisWave = startEnemiesPerWave + (currentWave - 1) * enemyIncreasePerWave;
-            Debug.Log("Wave baþladý: " + currentWave + " | Enemy sayýsý: " + enemiesThisWave);
+            int[] currentWaveEnemyTypes = nextWaveEnemyTypes;
+            nextWaveEnemyTypes = GenerateWaveEnemyTypes(currentWave + 1);
 
-            for (int i = 0; i < enemiesThisWave; i++)
+            Debug.Log("Wave baÅŸladÄ±: " + currentWave + " | Enemy sayÄ±sÄ±: " + currentWaveEnemyTypes.Length);
+
+            for (int i = 0; i < currentWaveEnemyTypes.Length; i++)
             {
-                SpawnEnemy();
+                SpawnEnemy(currentWaveEnemyTypes[i]);
                 yield return new WaitForSeconds(spawnInterval);
             }
 
-            // Bu wave'deki tüm enemy'ler bitene kadar bekle
             while (aliveEnemies > 0)
             {
                 yield return null;
             }
 
-            // level1 tamamlanýnca level2'ye geç
             if (SceneManager.GetActiveScene().name == "level1" && currentWave >= maxWavesLevel1)
             {
-                Debug.Log("Level 1 tamamlandý. level2 yükleniyor...");
+                Debug.Log("Level 1 tamamlandÄ±. level2 yÃ¼kleniyor...");
                 SceneManager.LoadScene("level2");
                 yield break;
             }
 
-            // Sonraki wave geri sayýmý
             nextWaveCountdown = timeBetweenWaves;
 
             while (nextWaveCountdown > 0f)
@@ -98,13 +101,31 @@ public class WaveSpawner : MonoBehaviour
         }
     }
 
-    void SpawnEnemy()
+    private int[] GenerateWaveEnemyTypes(int waveNumber)
+    {
+        int enemyCount = GetEnemyCountForWave(waveNumber);
+        int[] enemyTypes = new int[enemyCount];
+
+        for (int i = 0; i < enemyCount; i++)
+        {
+            enemyTypes[i] = Random.Range(0, 3);
+        }
+
+        return enemyTypes;
+    }
+
+    private int GetEnemyCountForWave(int waveNumber)
+    {
+        return startEnemiesPerWave + (waveNumber - 1) * enemyIncreasePerWave;
+    }
+
+    private void SpawnEnemy(int enemyType)
     {
         GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
 
         if (enemy == null)
         {
-            Debug.LogError("WaveSpawner: Enemy oluþturulamadý.");
+            Debug.LogError("WaveSpawner: Enemy oluÅŸturulamadÄ±.");
             return;
         }
 
@@ -114,14 +135,14 @@ public class WaveSpawner : MonoBehaviour
 
         if (movement == null)
         {
-            Debug.LogError("Enemy prefabýnda EnemyMovement yok.");
+            Debug.LogError("Enemy prefabÄ±nda EnemyMovement yok.");
             Destroy(enemy);
             return;
         }
 
         if (health == null)
         {
-            Debug.LogError("Enemy prefabýnda EnemyHealth yok.");
+            Debug.LogError("Enemy prefabÄ±nda EnemyHealth yok.");
             Destroy(enemy);
             return;
         }
@@ -129,16 +150,14 @@ public class WaveSpawner : MonoBehaviour
         movement.waypoints = waypoints;
         aliveEnemies++;
 
-        int rand = Random.Range(0, 3);
-
-        if (rand == 0)
+        if (enemyType == 0)
         {
             if (rend != null) rend.material.color = Color.yellow;
             movement.speed = 9f;
             health.maxHealth = 180f;
             health.moneyReward = 8;
         }
-        else if (rand == 1)
+        else if (enemyType == 1)
         {
             if (rend != null) rend.material.color = Color.black;
             movement.speed = 3f;
@@ -156,17 +175,53 @@ public class WaveSpawner : MonoBehaviour
         health.SetHealthToMax();
     }
 
+    public string GetNextWavePreviewText()
+    {
+        if (nextWaveEnemyTypes == null || nextWaveEnemyTypes.Length == 0)
+        {
+            return "Preparing next wave...";
+        }
+
+        int fastCount = 0;
+        int tankCount = 0;
+        int basicCount = 0;
+
+        for (int i = 0; i < nextWaveEnemyTypes.Length; i++)
+        {
+            if (nextWaveEnemyTypes[i] == 0)
+            {
+                fastCount++;
+            }
+            else if (nextWaveEnemyTypes[i] == 1)
+            {
+                tankCount++;
+            }
+            else
+            {
+                basicCount++;
+            }
+        }
+
+        return "FAST  " + fastCount + "\nTANK  " + tankCount + "\nBASIC  " + basicCount;
+    }
+
     public void EnemyRemoved()
     {
         aliveEnemies--;
-        if (aliveEnemies < 0) aliveEnemies = 0;
+        if (aliveEnemies < 0)
+        {
+            aliveEnemies = 0;
+        }
 
         Debug.Log("Kalan enemy: " + aliveEnemies);
     }
 
     private void OnDrawGizmos()
     {
-        if (waypoints == null || waypoints.Length < 2) return;
+        if (waypoints == null || waypoints.Length < 2)
+        {
+            return;
+        }
 
         Gizmos.color = Color.green;
 

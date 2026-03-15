@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using TMPro;
+using UnityEngine;
 using UnityEngine.SceneManagement;
-using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -29,12 +29,16 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        EnsureRuntimeSupportObject<WavePanelUI>("WavePanelUI");
+        EnsureRuntimeSupportObject<TowerSelectionUI>("TowerSelectionUI");
     }
 
     private void Start()
     {
         if (gameOverPanel != null)
+        {
             gameOverPanel.SetActive(false);
+        }
 
         UpdateUI();
     }
@@ -46,7 +50,10 @@ public class GameManager : MonoBehaviour
 
     public void DamageBase(int damage)
     {
-        if (gameOver) return;
+        if (gameOver)
+        {
+            return;
+        }
 
         baseHP -= damage;
 
@@ -68,20 +75,24 @@ public class GameManager : MonoBehaviour
     public bool SpendMoney(int amount)
     {
         if (money < amount)
+        {
             return false;
+        }
 
         money -= amount;
         UpdateUI();
         return true;
     }
 
-    void GameOver()
+    private void GameOver()
     {
         gameOver = true;
         Time.timeScale = 0f;
 
         if (gameOverPanel != null)
+        {
             gameOverPanel.SetActive(true);
+        }
     }
 
     public void RestartLevel()
@@ -90,35 +101,59 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    void UpdateUI()
+    private void UpdateUI()
     {
         if (baseHpText != null)
+        {
             baseHpText.text = BuildLabel("BASE", "#7DD3FC", baseHP.ToString());
+        }
 
         if (killText != null)
+        {
             killText.text = BuildLabel("KILLS", "#FCA5A5", WaveSpawner.enemiesKilled.ToString());
+        }
 
         if (levelText != null)
+        {
             levelText.text = BuildLabel("LEVEL", "#F8FAFC", SceneManager.GetActiveScene().name.ToUpperInvariant());
+        }
 
         if (moneyText != null)
+        {
             moneyText.text = BuildLabel("MONEY", "#FDE68A", money.ToString());
+        }
 
         if (waveSpawner != null && waveText != null)
+        {
             waveText.text = BuildLabel("WAVE", "#C4B5FD", waveSpawner.currentWave.ToString());
+        }
 
         if (waveSpawner != null && nextWaveText != null)
         {
             if (waveSpawner.nextWaveCountdown > 0.1f)
-                nextWaveText.text = BuildLabel("NEXT", "#86EFAC", Mathf.CeilToInt(waveSpawner.nextWaveCountdown).ToString() + "s");
+            {
+                nextWaveText.text = BuildLabel("NEXT", "#86EFAC", Mathf.CeilToInt(waveSpawner.nextWaveCountdown) + "s");
+            }
             else
+            {
                 nextWaveText.text = string.Empty;
+            }
         }
     }
 
-    string BuildLabel(string title, string colorHex, string value)
+    private string BuildLabel(string title, string colorHex, string value)
     {
         return $"<b><color={colorHex}>{title}</color></b>  <size=115%>{value}</size>";
     }
-}
 
+    private void EnsureRuntimeSupportObject<T>(string objectName) where T : Component
+    {
+        if (FindObjectOfType<T>() != null)
+        {
+            return;
+        }
+
+        GameObject supportObject = new GameObject(objectName);
+        supportObject.AddComponent<T>();
+    }
+}

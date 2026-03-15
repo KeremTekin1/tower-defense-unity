@@ -211,3 +211,4 @@ public class FireTower : MonoBehaviour
         Gizmos.DrawRay(transform.position, rightBoundary);
     }
 }
+

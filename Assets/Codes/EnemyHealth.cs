@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyHealth : MonoBehaviour
 {
@@ -7,6 +7,27 @@ public class EnemyHealth : MonoBehaviour
     public int moneyReward = 10;
 
     private bool isDead = false;
+    private EnemyStatusVfx statusVfx;
+
+    public float HealthNormalized
+    {
+        get
+        {
+            if (maxHealth <= 0f)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01(currentHealth / maxHealth);
+        }
+    }
+
+    public bool IsDead => isDead;
+
+    private void Awake()
+    {
+        EnsureSupportComponents();
+    }
 
     private void Start()
     {
@@ -20,7 +41,10 @@ public class EnemyHealth : MonoBehaviour
 
     public void TakeDamage(float damageAmount)
     {
-        if (isDead) return;
+        if (isDead)
+        {
+            return;
+        }
 
         currentHealth -= damageAmount;
 
@@ -30,9 +54,43 @@ public class EnemyHealth : MonoBehaviour
         }
     }
 
-    void Die()
+    public void PlayFireFeedback()
     {
-        if (isDead) return;
+        if (statusVfx != null)
+        {
+            statusVfx.EmitFireSparks();
+        }
+    }
+
+    public void PlaySlowFeedback()
+    {
+        if (statusVfx != null)
+        {
+            statusVfx.EmitFrostShards();
+        }
+    }
+
+    private void EnsureSupportComponents()
+    {
+        if (GetComponent<EnemyHealthBar>() == null)
+        {
+            gameObject.AddComponent<EnemyHealthBar>();
+        }
+
+        statusVfx = GetComponent<EnemyStatusVfx>();
+        if (statusVfx == null)
+        {
+            statusVfx = gameObject.AddComponent<EnemyStatusVfx>();
+        }
+    }
+
+    private void Die()
+    {
+        if (isDead)
+        {
+            return;
+        }
+
         isDead = true;
 
         WaveSpawner.enemiesKilled++;
