@@ -130,6 +130,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   speed: 5
+  baseDamage: 1
 --- !u!114 &-7051687346532864528
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -142,5 +143,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b946349cfe7930b43bbf4ebef605c926, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
+  maxHealth: 1000
   currentHealth: 0

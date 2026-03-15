@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
@@ -9,10 +9,19 @@ public class GameManager : MonoBehaviour
     [Header("Base")]
     public int baseHP = 10;
 
+    [Header("Money")]
+    public int money = 200;
+
+    [Header("References")]
+    public WaveSpawner waveSpawner;
+
     [Header("UI")]
     public TMP_Text baseHpText;
     public TMP_Text killText;
     public TMP_Text levelText;
+    public TMP_Text moneyText;
+    public TMP_Text waveText;
+    public TMP_Text nextWaveText;
     public GameObject gameOverPanel;
 
     private bool gameOver = false;
@@ -50,6 +59,22 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
+    public void AddMoney(int amount)
+    {
+        money += amount;
+        UpdateUI();
+    }
+
+    public bool SpendMoney(int amount)
+    {
+        if (money < amount)
+            return false;
+
+        money -= amount;
+        UpdateUI();
+        return true;
+    }
+
     void GameOver()
     {
         gameOver = true;
@@ -75,5 +100,19 @@ public class GameManager : MonoBehaviour
 
         if (levelText != null)
             levelText.text = "Level: " + SceneManager.GetActiveScene().name;
+
+        if (moneyText != null)
+            moneyText.text = "Money: " + money;
+
+        if (waveSpawner != null && waveText != null)
+            waveText.text = "Wave: " + waveSpawner.currentWave;
+
+        if (waveSpawner != null && nextWaveText != null)
+        {
+            if (waveSpawner.nextWaveCountdown > 0.1f)
+                nextWaveText.text = "Next Wave In: " + Mathf.CeilToInt(waveSpawner.nextWaveCountdown);
+            else
+                nextWaveText.text = "";
+        }
     }
 }

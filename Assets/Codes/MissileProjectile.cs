@@ -9,12 +9,22 @@ public class MissileProjectile : MonoBehaviour
     private Vector3 direction;
     private bool isLaunched = false;
     private bool hasHit = false;
+    private float lifetimeTimer = 0f;
+
+    private void OnEnable()
+    {
+        // Reset state every time pulled from pool
+        direction = Vector3.zero;
+        isLaunched = false;
+        hasHit = false;
+        lifetimeTimer = 0f;
+    }
 
     public void SetTarget(GameObject target)
     {
         if (target == null)
         {
-            Destroy(gameObject);
+            ReturnToPool();
             return;
         }
 
@@ -42,7 +52,7 @@ public class MissileProjectile : MonoBehaviour
         }
 
         isLaunched = true;
-        Destroy(gameObject, lifeTime);
+        lifetimeTimer = lifeTime;
     }
 
     private void Update()
@@ -50,6 +60,12 @@ public class MissileProjectile : MonoBehaviour
         if (!isLaunched || hasHit) return;
 
         transform.position += direction * speed * Time.deltaTime;
+
+        lifetimeTimer -= Time.deltaTime;
+        if (lifetimeTimer <= 0f)
+        {
+            ReturnToPool();
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -62,6 +78,18 @@ public class MissileProjectile : MonoBehaviour
         {
             hasHit = true;
             health.TakeDamage(damage);
+            ReturnToPool();
+        }
+    }
+
+    void ReturnToPool()
+    {
+        if (ProjectilePool.Instance != null)
+        {
+            ProjectilePool.Instance.ReturnMissile(gameObject);
+        }
+        else
+        {
             Destroy(gameObject);
         }
     }

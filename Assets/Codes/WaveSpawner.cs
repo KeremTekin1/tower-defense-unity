@@ -4,17 +4,35 @@ using UnityEngine.SceneManagement;
 
 public class WaveSpawner : MonoBehaviour
 {
+    public static WaveSpawner Instance;
+
     public GameObject enemyPrefab;
     public Transform spawnPoint;
     public Transform[] waypoints;
 
+    [Header("Wave Settings")]
     public float spawnInterval = 1.2f;
+    public float timeBetweenWaves = 5f;
+    public int startEnemiesPerWave = 5;
+    public int enemyIncreasePerWave = 3;
+    public int maxWavesLevel1 = 3;
+
+    [HideInInspector] public int currentWave = 0;
+    [HideInInspector] public float nextWaveCountdown = 0f;
 
     public static int enemiesKilled = 0;
+
+    private int aliveEnemies = 0;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
         enemiesKilled = 0;
+        aliveEnemies = 0;
 
         if (enemyPrefab == null)
         {
@@ -34,24 +52,49 @@ public class WaveSpawner : MonoBehaviour
             return;
         }
 
-        Debug.Log("WaveSpawner baþladý. Aktif sahne: " + SceneManager.GetActiveScene().name);
-        StartCoroutine(SpawnRoutine());
+        StartCoroutine(WaveRoutine());
     }
 
-    IEnumerator SpawnRoutine()
+    IEnumerator WaveRoutine()
     {
         while (true)
         {
-            SpawnEnemy();
+            currentWave++;
+            nextWaveCountdown = 0f;
 
-            if (enemiesKilled >= 10 && SceneManager.GetActiveScene().name == "level1")
+            int enemiesThisWave = startEnemiesPerWave + (currentWave - 1) * enemyIncreasePerWave;
+            Debug.Log("Wave baþladý: " + currentWave + " | Enemy sayýsý: " + enemiesThisWave);
+
+            for (int i = 0; i < enemiesThisWave; i++)
             {
-                Debug.Log("10 düþman öldürüldü. level2 yükleniyor...");
+                SpawnEnemy();
+                yield return new WaitForSeconds(spawnInterval);
+            }
+
+            // Bu wave'deki tüm enemy'ler bitene kadar bekle
+            while (aliveEnemies > 0)
+            {
+                yield return null;
+            }
+
+            // level1 tamamlanýnca level2'ye geç
+            if (SceneManager.GetActiveScene().name == "level1" && currentWave >= maxWavesLevel1)
+            {
+                Debug.Log("Level 1 tamamlandý. level2 yükleniyor...");
                 SceneManager.LoadScene("level2");
                 yield break;
             }
 
-            yield return new WaitForSeconds(spawnInterval);
+            // Sonraki wave geri sayýmý
+            nextWaveCountdown = timeBetweenWaves;
+
+            while (nextWaveCountdown > 0f)
+            {
+                nextWaveCountdown -= Time.deltaTime;
+                yield return null;
+            }
+
+            nextWaveCountdown = 0f;
         }
     }
 
@@ -84,33 +127,41 @@ public class WaveSpawner : MonoBehaviour
         }
 
         movement.waypoints = waypoints;
+        aliveEnemies++;
 
-        // 3 farklý enemy tipi
         int rand = Random.Range(0, 3);
 
         if (rand == 0)
         {
-            // Hýzlý düþman
             if (rend != null) rend.material.color = Color.yellow;
             movement.speed = 9f;
             health.maxHealth = 180f;
+            health.moneyReward = 8;
         }
         else if (rand == 1)
         {
-            // Tank düþman
             if (rend != null) rend.material.color = Color.black;
             movement.speed = 3f;
             health.maxHealth = 600f;
+            health.moneyReward = 20;
         }
         else
         {
-            // Normal düþman
             if (rend != null) rend.material.color = Color.red;
             movement.speed = 5.5f;
             health.maxHealth = 300f;
+            health.moneyReward = 12;
         }
 
         health.SetHealthToMax();
+    }
+
+    public void EnemyRemoved()
+    {
+        aliveEnemies--;
+        if (aliveEnemies < 0) aliveEnemies = 0;
+
+        Debug.Log("Kalan enemy: " + aliveEnemies);
     }
 
     private void OnDrawGizmos()

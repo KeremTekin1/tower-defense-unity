@@ -4,8 +4,10 @@ public class EnemyMovement : MonoBehaviour
 {
     public Transform[] waypoints;
     public float speed = 5f;
+    public int baseDamage = 1;
 
     private int currentWaypointIndex = 0;
+    private bool reachedBase = false;
 
     private void Update()
     {
@@ -42,9 +44,17 @@ public class EnemyMovement : MonoBehaviour
 
     void ReachBase()
     {
+        if (reachedBase) return;
+        reachedBase = true;
+
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.DamageBase(1);
+            GameManager.Instance.DamageBase(baseDamage);
+        }
+
+        if (WaveSpawner.Instance != null)
+        {
+            WaveSpawner.Instance.EnemyRemoved();
         }
 
         Destroy(gameObject);

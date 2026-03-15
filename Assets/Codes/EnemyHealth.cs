@@ -4,6 +4,7 @@ public class EnemyHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
     public float currentHealth;
+    public int moneyReward = 10;
 
     private bool isDead = false;
 
@@ -35,6 +36,17 @@ public class EnemyHealth : MonoBehaviour
         isDead = true;
 
         WaveSpawner.enemiesKilled++;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.AddMoney(moneyReward);
+        }
+
+        if (WaveSpawner.Instance != null)
+        {
+            WaveSpawner.Instance.EnemyRemoved();
+        }
+
         Destroy(gameObject);
     }
 }

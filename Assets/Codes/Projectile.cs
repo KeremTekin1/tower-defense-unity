@@ -7,16 +7,23 @@ public class Projectile : MonoBehaviour
 
     private Transform target;
 
+    // Called by the pool or tower before enabling the object
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
+    }
+
+    private void OnEnable()
+    {
+        // Reset state every time the object is pulled from the pool
+        target = null;
     }
 
     private void Update()
     {
         if (target == null)
         {
-            Destroy(gameObject);
+            ReturnToPool();
             return;
         }
 
@@ -45,6 +52,18 @@ public class Projectile : MonoBehaviour
             }
         }
 
-        Destroy(gameObject);
+        ReturnToPool();
+    }
+
+    void ReturnToPool()
+    {
+        if (ProjectilePool.Instance != null)
+        {
+            ProjectilePool.Instance.ReturnProjectile(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 }
