@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyMovement : MonoBehaviour
 {
@@ -8,9 +8,13 @@ public class EnemyMovement : MonoBehaviour
 
     private int currentWaypointIndex = 0;
     private bool reachedBase = false;
+    private float slowMultiplier = 1f;
+    private float slowTimer = 0f;
 
     private void Update()
     {
+        TickSlowEffect();
+
         if (waypoints == null || waypoints.Length == 0)
             return;
 
@@ -21,11 +25,12 @@ public class EnemyMovement : MonoBehaviour
         }
 
         Transform target = waypoints[currentWaypointIndex];
+        float currentSpeed = speed * slowMultiplier;
 
         transform.position = Vector3.MoveTowards(
             transform.position,
             target.position,
-            speed * Time.deltaTime
+            currentSpeed * Time.deltaTime
         );
 
         Vector3 direction = target.position - transform.position;
@@ -39,6 +44,28 @@ public class EnemyMovement : MonoBehaviour
         if (Vector3.Distance(transform.position, target.position) < 0.15f)
         {
             currentWaypointIndex++;
+        }
+    }
+
+    public void ApplySlow(float multiplier, float duration)
+    {
+        slowMultiplier = Mathf.Clamp(multiplier, 0.2f, 1f);
+        slowTimer = Mathf.Max(slowTimer, duration);
+    }
+
+    private void TickSlowEffect()
+    {
+        if (slowTimer <= 0f)
+        {
+            slowMultiplier = 1f;
+            return;
+        }
+
+        slowTimer -= Time.deltaTime;
+        if (slowTimer <= 0f)
+        {
+            slowTimer = 0f;
+            slowMultiplier = 1f;
         }
     }
 

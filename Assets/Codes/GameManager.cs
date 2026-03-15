@@ -93,26 +93,32 @@ public class GameManager : MonoBehaviour
     void UpdateUI()
     {
         if (baseHpText != null)
-            baseHpText.text = "Base HP: " + baseHP;
+            baseHpText.text = BuildLabel("BASE", "#7DD3FC", baseHP.ToString());
 
         if (killText != null)
-            killText.text = "Kills: " + WaveSpawner.enemiesKilled;
+            killText.text = BuildLabel("KILLS", "#FCA5A5", WaveSpawner.enemiesKilled.ToString());
 
         if (levelText != null)
-            levelText.text = "Level: " + SceneManager.GetActiveScene().name;
+            levelText.text = BuildLabel("LEVEL", "#F8FAFC", SceneManager.GetActiveScene().name.ToUpperInvariant());
 
         if (moneyText != null)
-            moneyText.text = "Money: " + money;
+            moneyText.text = BuildLabel("MONEY", "#FDE68A", money.ToString());
 
         if (waveSpawner != null && waveText != null)
-            waveText.text = "Wave: " + waveSpawner.currentWave;
+            waveText.text = BuildLabel("WAVE", "#C4B5FD", waveSpawner.currentWave.ToString());
 
         if (waveSpawner != null && nextWaveText != null)
         {
             if (waveSpawner.nextWaveCountdown > 0.1f)
-                nextWaveText.text = "Next Wave In: " + Mathf.CeilToInt(waveSpawner.nextWaveCountdown);
+                nextWaveText.text = BuildLabel("NEXT", "#86EFAC", Mathf.CeilToInt(waveSpawner.nextWaveCountdown).ToString() + "s");
             else
-                nextWaveText.text = "";
+                nextWaveText.text = string.Empty;
         }
     }
+
+    string BuildLabel(string title, string colorHex, string value)
+    {
+        return $"<b><color={colorHex}>{title}</color></b>  <size=115%>{value}</size>";
+    }
 }
+
