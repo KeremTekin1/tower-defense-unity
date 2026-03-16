@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class FlameZone : MonoBehaviour
 {
@@ -34,6 +34,8 @@ public class FlameZone : MonoBehaviour
         {
             return;
         }
+
+        if (health.IsDead) return;
 
         health.TakeDamage(damagePerSecond * Time.deltaTime);
     }

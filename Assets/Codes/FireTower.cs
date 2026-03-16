@@ -1,19 +1,28 @@
-﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
-public class FireTower : MonoBehaviour
+public class FireTower : MonoBehaviour, ITower
 {
     public float range = 6f;
     public float angle = 90f;
-    public float damagePerSecond = 45f;
+    public float damagePerSecond = 90f;
     public int visualSegments = 24;
 
     private MeshFilter areaMeshFilter;
     private MeshRenderer areaMeshRenderer;
     private Mesh areaMesh;
+    private bool statsCached;
+    private float baseRange;
+    private float baseDamagePerSecond;
+    private int level = 1;
+
+    public int Level => level;
 
     private void Awake()
     {
+        CacheBaseStats();
         CreateAreaVisual();
+        ApplyLevelStats();
         UpdateAreaVisual();
     }
 
@@ -35,19 +44,91 @@ public class FireTower : MonoBehaviour
 
     private void Update()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
+        ApplyAreaDamage();
+    }
 
-        foreach (EnemyHealth enemyHealth in enemies)
+    public bool CanUpgrade()
+    {
+        return level < 3;
+    }
+
+    public int GetUpgradeCost()
+    {
+        if (level == 1)
         {
-            if (enemyHealth == null)
+            return 60;
+        }
+
+        if (level == 2)
+        {
+            return 110;
+        }
+
+        return 0;
+    }
+
+    public bool TryUpgrade()
+    {
+        CacheBaseStats();
+
+        if (!CanUpgrade())
+        {
+            return false;
+        }
+
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost()))
+        {
+            return false;
+        }
+
+        level++;
+        ApplyLevelStats();
+        UpdateAreaVisual();
+        return true;
+    }
+
+    private void CacheBaseStats()
+    {
+        if (statsCached)
+        {
+            return;
+        }
+
+        baseRange = range;
+        baseDamagePerSecond = damagePerSecond;
+        statsCached = true;
+    }
+
+    private void ApplyLevelStats()
+    {
+        int index = Mathf.Clamp(level - 1, 0, 2);
+        float[] rangeMultipliers = { 1f, 1.1f, 1.22f };
+        float[] damageMultipliers = { 1f, 1.45f, 2.15f };
+
+        range = baseRange * rangeMultipliers[index];
+        damagePerSecond = baseDamagePerSecond * damageMultipliers[index];
+    }
+
+    private void ApplyAreaDamage()
+    {
+        List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
+
+        for (int i = enemies.Count - 1; i >= 0; i--)
+        {
+            EnemyHealth enemyHealth = enemies[i];
+            if (enemyHealth == null || enemyHealth.IsDead)
             {
                 continue;
             }
 
-            if (IsEnemyInFireArc(enemyHealth.transform.position))
+            if (!IsEnemyInFireArc(enemyHealth.transform.position))
             {
-                enemyHealth.TakeDamage(damagePerSecond * Time.deltaTime);
+                continue;
             }
+
+            enemyHealth.TakeDamage(damagePerSecond * Time.deltaTime);
+            enemyHealth.PlayFireFeedback();
         }
     }
 
@@ -59,6 +140,11 @@ public class FireTower : MonoBehaviour
         if (directionToEnemy.sqrMagnitude > range * range)
         {
             return false;
+        }
+
+        if (directionToEnemy.sqrMagnitude < 0.0001f)
+        {
+            return true;
         }
 
         float angleToEnemy = Vector3.Angle(transform.forward, directionToEnemy.normalized);

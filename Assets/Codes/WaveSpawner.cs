@@ -1,4 +1,5 @@
-ï»¿using System.Collections;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +8,7 @@ public class WaveSpawner : MonoBehaviour
     public static WaveSpawner Instance;
 
     public GameObject enemyPrefab;
+    public EnemyData[] enemyTypes;
     public Transform spawnPoint;
     public Transform[] waypoints;
 
@@ -16,11 +18,13 @@ public class WaveSpawner : MonoBehaviour
     public int startEnemiesPerWave = 5;
     public int enemyIncreasePerWave = 3;
     public int maxWavesLevel1 = 3;
+    public string nextSceneName = "";
 
     [HideInInspector] public int currentWave = 0;
     [HideInInspector] public float nextWaveCountdown = 0f;
 
     public static int enemiesKilled = 0;
+    public static readonly List<EnemyHealth> ActiveEnemies = new List<EnemyHealth>();
 
     private int aliveEnemies = 0;
     private int[] nextWaveEnemyTypes;
@@ -35,23 +39,24 @@ public class WaveSpawner : MonoBehaviour
     private void Start()
     {
         enemiesKilled = 0;
+        ActiveEnemies.Clear();
         aliveEnemies = 0;
 
         if (enemyPrefab == null)
         {
-            Debug.LogError("WaveSpawner: enemyPrefab atanmadÄ±.");
+            Debug.LogError("WaveSpawner: enemyPrefab atanmadý.");
             return;
         }
 
         if (spawnPoint == null)
         {
-            Debug.LogError("WaveSpawner: spawnPoint atanmadÄ±.");
+            Debug.LogError("WaveSpawner: spawnPoint atanmadý.");
             return;
         }
 
         if (waypoints == null || waypoints.Length == 0)
         {
-            Debug.LogError("WaveSpawner: waypoints boÅŸ.");
+            Debug.LogError("WaveSpawner: waypoints boþ.");
             return;
         }
 
@@ -69,7 +74,7 @@ public class WaveSpawner : MonoBehaviour
             int[] currentWaveEnemyTypes = nextWaveEnemyTypes;
             nextWaveEnemyTypes = GenerateWaveEnemyTypes(currentWave + 1);
 
-            Debug.Log("Wave baÅŸladÄ±: " + currentWave + " | Enemy sayÄ±sÄ±: " + currentWaveEnemyTypes.Length);
+            Debug.Log("Wave baþladý: " + currentWave + " | Enemy sayýsý: " + currentWaveEnemyTypes.Length);
 
             for (int i = 0; i < currentWaveEnemyTypes.Length; i++)
             {
@@ -82,10 +87,12 @@ public class WaveSpawner : MonoBehaviour
                 yield return null;
             }
 
-            if (SceneManager.GetActiveScene().name == "level1" && currentWave >= maxWavesLevel1)
+            if (WavePanelUI.Instance != null) WavePanelUI.Instance.ShowWaveComplete(1.8f);
+
+            if (currentWave >= maxWavesLevel1)
             {
-                Debug.Log("Level 1 tamamlandÄ±. level2 yÃ¼kleniyor...");
-                SceneManager.LoadScene("level2");
+                if (!string.IsNullOrEmpty(nextSceneName))
+                    SceneManager.LoadScene(nextSceneName);
                 yield break;
             }
 
@@ -104,14 +111,19 @@ public class WaveSpawner : MonoBehaviour
     private int[] GenerateWaveEnemyTypes(int waveNumber)
     {
         int enemyCount = GetEnemyCountForWave(waveNumber);
-        int[] enemyTypes = new int[enemyCount];
+        int[] generatedEnemyTypes = new int[enemyCount];
 
         for (int i = 0; i < enemyCount; i++)
         {
-            enemyTypes[i] = Random.Range(0, 3);
+            generatedEnemyTypes[i] = Random.Range(0, 3);
         }
 
-        return enemyTypes;
+        if (waveNumber >= 3 && enemyCount > 0 && waveNumber % 3 == 0)
+        {
+            generatedEnemyTypes[enemyCount - 1] = 3;
+        }
+
+        return generatedEnemyTypes;
     }
 
     private int GetEnemyCountForWave(int waveNumber)
@@ -125,7 +137,7 @@ public class WaveSpawner : MonoBehaviour
 
         if (enemy == null)
         {
-            Debug.LogError("WaveSpawner: Enemy oluÅŸturulamadÄ±.");
+            Debug.LogError("WaveSpawner: Enemy oluþturulamadý.");
             return;
         }
 
@@ -135,22 +147,39 @@ public class WaveSpawner : MonoBehaviour
 
         if (movement == null)
         {
-            Debug.LogError("Enemy prefabÄ±nda EnemyMovement yok.");
+            Debug.LogError("Enemy prefabýnda EnemyMovement yok.");
             Destroy(enemy);
             return;
         }
 
         if (health == null)
         {
-            Debug.LogError("Enemy prefabÄ±nda EnemyHealth yok.");
+            Debug.LogError("Enemy prefabýnda EnemyHealth yok.");
             Destroy(enemy);
             return;
         }
 
         movement.waypoints = waypoints;
+        movement.baseDamage = 1;
+        enemy.transform.localScale = Vector3.one;
         aliveEnemies++;
+        if (health != null) ActiveEnemies.Add(health);
 
-        if (enemyType == 0)
+        EnemyData data = null;
+        bool hasScriptableData = enemyTypes != null && enemyType >= 0 && enemyType < enemyTypes.Length;
+        if (hasScriptableData)
+        {
+            data = enemyTypes[enemyType];
+        }
+
+        if (data != null)
+        {
+            movement.speed = data.speed;
+            health.maxHealth = data.maxHealth;
+            health.moneyReward = data.moneyReward;
+            if (rend != null) rend.material.color = data.color;
+        }
+        else if (enemyType == 0)
         {
             if (rend != null) rend.material.color = Color.yellow;
             movement.speed = 9f;
@@ -164,13 +193,26 @@ public class WaveSpawner : MonoBehaviour
             health.maxHealth = 600f;
             health.moneyReward = 20;
         }
-        else
+        else if (enemyType == 2)
         {
             if (rend != null) rend.material.color = Color.red;
             movement.speed = 5.5f;
             health.maxHealth = 300f;
             health.moneyReward = 12;
         }
+        else
+        {
+            if (rend != null) rend.material.color = new Color(0.82f, 0.35f, 1f);
+            movement.speed = 2.4f;
+            movement.baseDamage = 8;
+            health.maxHealth = 2600f;
+            health.moneyReward = 60;
+            enemy.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
+        }
+
+        float waveScale = 1f + (currentWave - 1) * 0.12f;
+        health.maxHealth *= waveScale;
+        movement.speed = Mathf.Min(movement.speed * (1f + (currentWave - 1) * 0.05f), 18f);
 
         health.SetHealthToMax();
     }
@@ -185,6 +227,7 @@ public class WaveSpawner : MonoBehaviour
         int fastCount = 0;
         int tankCount = 0;
         int basicCount = 0;
+        int godCount = 0;
 
         for (int i = 0; i < nextWaveEnemyTypes.Length; i++)
         {
@@ -196,13 +239,17 @@ public class WaveSpawner : MonoBehaviour
             {
                 tankCount++;
             }
-            else
+            else if (nextWaveEnemyTypes[i] == 2)
             {
                 basicCount++;
             }
+            else
+            {
+                godCount++;
+            }
         }
 
-        return "FAST  " + fastCount + "\nTANK  " + tankCount + "\nBASIC  " + basicCount;
+        return "FAST  " + fastCount + "\nTANK  " + tankCount + "\nBASIC  " + basicCount + "\nGOD  " + godCount;
     }
 
     public void EnemyRemoved()
@@ -234,3 +281,5 @@ public class WaveSpawner : MonoBehaviour
         }
     }
 }
+
+

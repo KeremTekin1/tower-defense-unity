@@ -1,10 +1,12 @@
-﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
-public class SlowTower : MonoBehaviour
+public class SlowTower : MonoBehaviour, ITower
 {
     public float range = 8f;
     public float coneAngle = 90f;
     public float fireRate = 1.2f;
+    [HideInInspector]
     public float damage = 18f;
     public float slowMultiplier = 0.45f;
     public float slowDuration = 1.8f;
@@ -14,10 +16,20 @@ public class SlowTower : MonoBehaviour
     private MeshFilter areaMeshFilter;
     private MeshRenderer areaMeshRenderer;
     private Mesh areaMesh;
+    private bool statsCached;
+    private float baseRange;
+    private float baseFireRate;
+    private float baseSlowMultiplier;
+    private float baseSlowDuration;
+    private int level = 1;
+
+    public int Level => level;
 
     private void Awake()
     {
+        CacheBaseStats();
         CreateAreaVisual();
+        ApplyLevelStats();
         UpdateAreaVisual();
     }
 
@@ -44,6 +56,75 @@ public class SlowTower : MonoBehaviour
         TryShoot();
     }
 
+    public bool CanUpgrade()
+    {
+        return level < 3;
+    }
+
+    public int GetUpgradeCost()
+    {
+        if (level == 1)
+        {
+            return 50;
+        }
+
+        if (level == 2)
+        {
+            return 90;
+        }
+
+        return 0;
+    }
+
+    public bool TryUpgrade()
+    {
+        CacheBaseStats();
+
+        if (!CanUpgrade())
+        {
+            return false;
+        }
+
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost()))
+        {
+            return false;
+        }
+
+        level++;
+        ApplyLevelStats();
+        UpdateAreaVisual();
+        return true;
+    }
+
+    private void CacheBaseStats()
+    {
+        if (statsCached)
+        {
+            return;
+        }
+
+        baseRange = range;
+        baseFireRate = fireRate;
+        baseSlowMultiplier = slowMultiplier;
+        baseSlowDuration = slowDuration;
+        statsCached = true;
+    }
+
+    private void ApplyLevelStats()
+    {
+        int index = Mathf.Clamp(level - 1, 0, 2);
+        float[] rangeMultipliers = { 1f, 1.14f, 1.3f };
+        float[] fireRateMultipliers = { 1f, 1.2f, 1.4f };
+        float[] slowDurationMultipliers = { 1f, 1.2f, 1.38f };
+        float[] slowStrengthMultipliers = { 1f, 0.82f, 0.64f };
+
+        range = baseRange * rangeMultipliers[index];
+        fireRate = baseFireRate * fireRateMultipliers[index];
+        slowDuration = baseSlowDuration * slowDurationMultipliers[index];
+        slowMultiplier = Mathf.Clamp(baseSlowMultiplier * slowStrengthMultipliers[index], 0.15f, 1f);
+    }
+
     private void TickCooldown()
     {
         fireCooldown -= Time.deltaTime;
@@ -67,11 +148,12 @@ public class SlowTower : MonoBehaviour
 
     private bool HasEnemyInCone()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
+        List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
 
-        foreach (EnemyHealth enemyHealth in enemies)
+        for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            if (enemyHealth != null && IsInsideCone(enemyHealth.transform.position))
+            EnemyHealth enemyHealth = enemies[i];
+            if (enemyHealth != null && !enemyHealth.IsDead && IsInsideCone(enemyHealth.transform.position))
             {
                 return true;
             }
@@ -82,21 +164,21 @@ public class SlowTower : MonoBehaviour
 
     private void ApplyConeEffect()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
+        List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
 
-        foreach (EnemyHealth enemyHealth in enemies)
+        for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            if (enemyHealth == null || !IsInsideCone(enemyHealth.transform.position))
+            EnemyHealth enemyHealth = enemies[i];
+            if (enemyHealth == null || enemyHealth.IsDead || !IsInsideCone(enemyHealth.transform.position))
             {
                 continue;
             }
-
-            enemyHealth.TakeDamage(damage);
 
             EnemyMovement movement = enemyHealth.GetComponent<EnemyMovement>();
             if (movement != null)
             {
                 movement.ApplySlow(slowMultiplier, slowDuration);
+                enemyHealth.PlaySlowFeedback();
             }
         }
     }

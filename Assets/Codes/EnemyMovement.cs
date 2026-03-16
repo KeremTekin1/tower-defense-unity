@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class EnemyMovement : MonoBehaviour
 {
@@ -72,7 +72,12 @@ public class EnemyMovement : MonoBehaviour
     void ReachBase()
     {
         if (reachedBase) return;
+
+        EnemyHealth health = GetComponent<EnemyHealth>();
+        if (health != null && health.IsDead) return;
+
         reachedBase = true;
+        WaveSpawner.ActiveEnemies.Remove(GetComponent<EnemyHealth>());
 
         if (GameManager.Instance != null)
         {
@@ -87,3 +92,5 @@ public class EnemyMovement : MonoBehaviour
         Destroy(gameObject);
     }
 }
+
+

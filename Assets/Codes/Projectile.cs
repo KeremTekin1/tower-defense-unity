@@ -13,12 +13,6 @@ public class Projectile : MonoBehaviour
         target = newTarget;
     }
 
-    private void OnEnable()
-    {
-        // Reset state every time the object is pulled from the pool
-        target = null;
-    }
-
     private void Update()
     {
         if (target == null)

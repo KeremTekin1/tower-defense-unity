@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -40,11 +40,6 @@ public class GameManager : MonoBehaviour
             gameOverPanel.SetActive(false);
         }
 
-        UpdateUI();
-    }
-
-    private void Update()
-    {
         UpdateUI();
     }
 
@@ -98,6 +93,7 @@ public class GameManager : MonoBehaviour
     public void RestartLevel()
     {
         Time.timeScale = 1f;
+        WaveSpawner.ActiveEnemies.Clear();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
@@ -115,12 +111,12 @@ public class GameManager : MonoBehaviour
 
         if (levelText != null)
         {
-            levelText.text = BuildLabel("LEVEL", "#F8FAFC", SceneManager.GetActiveScene().name.ToUpperInvariant());
+            levelText.text = BuildLabel("LEVEL", "#F8FAFC", GetDisplayLevelValue());
         }
 
         if (moneyText != null)
         {
-            moneyText.text = BuildLabel("MONEY", "#FDE68A", money.ToString());
+            moneyText.text = BuildLabel("CASH", "#FDE68A", money.ToString());
         }
 
         if (waveSpawner != null && waveText != null)
@@ -141,14 +137,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private string GetDisplayLevelValue()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
+        string numericPart = string.Empty;
+
+        for (int i = 0; i < sceneName.Length; i++)
+        {
+            if (char.IsDigit(sceneName[i]))
+            {
+                numericPart += sceneName[i];
+            }
+        }
+
+        return string.IsNullOrEmpty(numericPart) ? sceneName.ToUpperInvariant() : numericPart;
+    }
+
     private string BuildLabel(string title, string colorHex, string value)
     {
-        return $"<b><color={colorHex}>{title}</color></b>  <size=115%>{value}</size>";
+        return $"<size=82%><b><color={colorHex}>{title}</color></b></size>  <size=102%>{value}</size>";
     }
 
     private void EnsureRuntimeSupportObject<T>(string objectName) where T : Component
     {
-        if (FindObjectOfType<T>() != null)
+        if (FindFirstObjectByType<T>() != null)
         {
             return;
         }

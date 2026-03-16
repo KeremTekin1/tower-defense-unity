@@ -1,46 +1,56 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class MissileProjectile : MonoBehaviour
 {
     public float speed = 12f;
-    public float damage = 80f;
+    public float damage = 140f;
     public float lifeTime = 4f;
 
+    private Transform target;
     private Vector3 direction;
-    private bool isLaunched = false;
-    private bool hasHit = false;
-    private float lifetimeTimer = 0f;
+    private bool useHoming;
+    private bool isLaunched;
+    private bool hasHit;
+    private float lifetimeTimer;
 
     private void OnEnable()
     {
-        // Reset state every time pulled from pool
+        target = null;
         direction = Vector3.zero;
+        useHoming = false;
         isLaunched = false;
         hasHit = false;
         lifetimeTimer = 0f;
     }
 
-    public void SetTarget(GameObject target)
+    public void SetTarget(GameObject newTarget, bool homing)
     {
-        if (target == null)
+        if (newTarget == null)
         {
             ReturnToPool();
             return;
         }
 
-        EnemyMovement enemyMove = target.GetComponent<EnemyMovement>();
+        useHoming = homing;
+        target = newTarget.transform;
 
-        Vector3 targetPos = target.transform.position;
+        if (useHoming)
+        {
+            isLaunched = true;
+            lifetimeTimer = lifeTime;
+            return;
+        }
+
+        EnemyMovement enemyMove = newTarget.GetComponent<EnemyMovement>();
+        Vector3 targetPos = newTarget.transform.position;
         Vector3 predictedPos = targetPos;
 
         if (enemyMove != null)
         {
             float distanceToTarget = Vector3.Distance(transform.position, targetPos);
             float timeToReach = distanceToTarget / speed;
-
-            Vector3 enemyForward = target.transform.forward;
+            Vector3 enemyForward = newTarget.transform.forward;
             float enemySpeed = enemyMove.speed;
-
             predictedPos = targetPos + enemyForward * enemySpeed * timeToReach;
         }
 
@@ -57,9 +67,19 @@ public class MissileProjectile : MonoBehaviour
 
     private void Update()
     {
-        if (!isLaunched || hasHit) return;
+        if (!isLaunched || hasHit)
+        {
+            return;
+        }
 
-        transform.position += direction * speed * Time.deltaTime;
+        if (useHoming)
+        {
+            UpdateHomingMovement();
+        }
+        else
+        {
+            UpdatePredictiveMovement();
+        }
 
         lifetimeTimer -= Time.deltaTime;
         if (lifetimeTimer <= 0f)
@@ -68,21 +88,60 @@ public class MissileProjectile : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void UpdateHomingMovement()
     {
-        if (hasHit) return;
-
-        EnemyHealth health = other.GetComponentInParent<EnemyHealth>();
-
-        if (health != null)
+        if (target == null)
         {
-            hasHit = true;
-            health.TakeDamage(damage);
             ReturnToPool();
+            return;
+        }
+
+        transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
+        transform.LookAt(target);
+
+        if (Vector3.Distance(transform.position, target.position) < 0.2f)
+        {
+            HitTarget(target.GetComponent<EnemyHealth>());
         }
     }
 
-    void ReturnToPool()
+    private void UpdatePredictiveMovement()
+    {
+        transform.position += direction * speed * Time.deltaTime;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (hasHit)
+        {
+            return;
+        }
+
+        EnemyHealth health = other.GetComponentInParent<EnemyHealth>();
+        if (health != null)
+        {
+            HitTarget(health);
+        }
+    }
+
+    private void HitTarget(EnemyHealth health)
+    {
+        if (hasHit)
+        {
+            return;
+        }
+
+        hasHit = true;
+
+        if (health != null)
+        {
+            health.TakeDamage(damage);
+        }
+
+        ReturnToPool();
+    }
+
+    private void ReturnToPool()
     {
         if (ProjectilePool.Instance != null)
         {

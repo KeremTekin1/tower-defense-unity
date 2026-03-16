@@ -1,4 +1,3 @@
-﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -59,7 +58,7 @@ public class EnemyHealthBar : MonoBehaviour
 
         GameObject backgroundObject = CreateUiObject("Background", canvasObject.transform);
         Image backgroundImage = backgroundObject.AddComponent<Image>();
-        backgroundImage.color = new Color(0.07f, 0.09f, 0.15f, 0.9f);
+        backgroundImage.color = new Color(0.08f, 0.1f, 0.14f, 0.92f);
 
         RectTransform backgroundRect = backgroundObject.GetComponent<RectTransform>();
         backgroundRect.anchorMin = Vector2.zero;
@@ -69,19 +68,19 @@ public class EnemyHealthBar : MonoBehaviour
 
         GameObject fillObject = CreateUiObject("Fill", backgroundObject.transform);
         fillImage = fillObject.AddComponent<Image>();
-        fillImage.type = Image.Type.Filled;
-        fillImage.fillMethod = Image.FillMethod.Horizontal;
-        fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+        fillImage.color = new Color(0.27f, 0.93f, 0.47f, 1f);
 
         fillRect = fillObject.GetComponent<RectTransform>();
         fillRect.anchorMin = new Vector2(0.05f, 0.2f);
         fillRect.anchorMax = new Vector2(0.95f, 0.8f);
         fillRect.offsetMin = Vector2.zero;
         fillRect.offsetMax = Vector2.zero;
+        fillRect.pivot = new Vector2(0f, 0.5f);
 
         GameObject frameObject = CreateUiObject("Frame", canvasObject.transform);
         Image frameImage = frameObject.AddComponent<Image>();
         frameImage.color = new Color(1f, 1f, 1f, 0.08f);
+
         RectTransform frameRect = frameObject.GetComponent<RectTransform>();
         frameRect.anchorMin = Vector2.zero;
         frameRect.anchorMax = Vector2.one;
@@ -114,7 +113,13 @@ public class EnemyHealthBar : MonoBehaviour
     private void UpdateVisual()
     {
         float normalizedHealth = enemyHealth.HealthNormalized;
-        fillImage.fillAmount = normalizedHealth;
-        fillImage.color = Color.Lerp(new Color(1f, 0.24f, 0.18f), new Color(0.25f, 0.95f, 0.45f), normalizedHealth);
+        fillRect.localScale = new Vector3(normalizedHealth, 1f, 1f);
+        fillImage.color = Color.Lerp(Color.red, new Color(0.27f, 0.93f, 0.47f, 1f), normalizedHealth);
+        fillImage.enabled = normalizedHealth > 0f;
+
+        if (enemyHealth.IsDead)
+        {
+            canvas.enabled = false;
+        }
     }
 }

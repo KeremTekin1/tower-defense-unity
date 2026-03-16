@@ -1,13 +1,28 @@
-﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
-public class Tower : MonoBehaviour
+public class Tower : MonoBehaviour, ITower
 {
     public float range = 8f;
     public float fireRate = 1f;
+    public float damage = 25f;
     public GameObject projectilePrefab;
     public Transform firePoint;
 
     private float fireCooldown;
+    private bool statsCached;
+    private float baseRange;
+    private float baseFireRate;
+    private float baseDamage;
+    private int level = 1;
+
+    public int Level => level;
+
+    private void Awake()
+    {
+        CacheBaseStats();
+        ApplyLevelStats();
+    }
 
     private void Update()
     {
@@ -23,6 +38,71 @@ public class Tower : MonoBehaviour
         TryShoot(target.transform);
     }
 
+    public bool CanUpgrade()
+    {
+        return level < 3;
+    }
+
+    public int GetUpgradeCost()
+    {
+        if (level == 1)
+        {
+            return 45;
+        }
+
+        if (level == 2)
+        {
+            return 85;
+        }
+
+        return 0;
+    }
+
+    public bool TryUpgrade()
+    {
+        CacheBaseStats();
+
+        if (!CanUpgrade())
+        {
+            return false;
+        }
+
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost()))
+        {
+            return false;
+        }
+
+        level++;
+        ApplyLevelStats();
+        return true;
+    }
+
+    private void CacheBaseStats()
+    {
+        if (statsCached)
+        {
+            return;
+        }
+
+        baseRange = range;
+        baseFireRate = fireRate;
+        baseDamage = damage;
+        statsCached = true;
+    }
+
+    private void ApplyLevelStats()
+    {
+        float[] rangeMultipliers = { 1f, 1.12f, 1.26f };
+        float[] fireRateMultipliers = { 1f, 1.22f, 1.48f };
+        float[] damageMultipliers = { 1f, 1.65f, 2.4f };
+
+        int index = Mathf.Clamp(level - 1, 0, 2);
+        range = baseRange * rangeMultipliers[index];
+        fireRate = baseFireRate * fireRateMultipliers[index];
+        damage = baseDamage * damageMultipliers[index];
+    }
+
     private void TickCooldown()
     {
         fireCooldown -= Time.deltaTime;
@@ -30,14 +110,15 @@ public class Tower : MonoBehaviour
 
     private GameObject FindNearestEnemy()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
+        List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
 
         GameObject nearest = null;
         float shortestDistance = Mathf.Infinity;
 
-        foreach (EnemyHealth enemyHealth in enemies)
+        for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            if (enemyHealth == null)
+            EnemyHealth enemyHealth = enemies[i];
+            if (enemyHealth == null || enemyHealth.IsDead)
             {
                 continue;
             }
@@ -106,6 +187,7 @@ public class Tower : MonoBehaviour
             return;
         }
 
+        projectile.damage = damage;
         projectile.SetTarget(target);
     }
 
@@ -115,3 +197,4 @@ public class Tower : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, range);
     }
 }
+

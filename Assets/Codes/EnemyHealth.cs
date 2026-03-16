@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class EnemyHealth : MonoBehaviour
 {
@@ -92,6 +92,7 @@ public class EnemyHealth : MonoBehaviour
         }
 
         isDead = true;
+        WaveSpawner.ActiveEnemies.Remove(this);
 
         WaveSpawner.enemiesKilled++;
 
@@ -108,3 +109,5 @@ public class EnemyHealth : MonoBehaviour
         Destroy(gameObject);
     }
 }
+
+

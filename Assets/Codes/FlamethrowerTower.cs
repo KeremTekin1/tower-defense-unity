@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class FlamethrowerTower : MonoBehaviour
 {
@@ -31,7 +32,7 @@ public class FlamethrowerTower : MonoBehaviour
 
     private GameObject FindNearestEnemy()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>();
+        List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
 
         GameObject nearest = null;
         float shortestDistance = Mathf.Infinity;
