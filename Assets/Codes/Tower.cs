@@ -6,6 +6,7 @@ public class Tower : MonoBehaviour, ITower
     public float range = 8f;
     public float fireRate = 1f;
     public float damage = 25f;
+    public TargetMode targetMode = TargetMode.Nearest;
     public GameObject projectilePrefab;
     public Transform firePoint;
 
@@ -28,50 +29,28 @@ public class Tower : MonoBehaviour, ITower
     {
         TickCooldown();
 
-        GameObject target = FindNearestEnemy();
-        if (target == null)
-        {
-            return;
-        }
+        GameObject target = FindTarget();
+        if (target == null) return;
 
         RotateToward(target.transform);
         TryShoot(target.transform);
     }
 
-    public bool CanUpgrade()
-    {
-        return level < 3;
-    }
+    public bool CanUpgrade() => level < 3;
 
     public int GetUpgradeCost()
     {
-        if (level == 1)
-        {
-            return 45;
-        }
-
-        if (level == 2)
-        {
-            return 85;
-        }
-
+        if (level == 1) return 45;
+        if (level == 2) return 85;
         return 0;
     }
 
     public bool TryUpgrade()
     {
-        CacheBaseStats();
-
-        if (!CanUpgrade())
-        {
-            return false;
-        }
+        if (!CanUpgrade()) return false;
 
         GameManager gameManager = GameManager.Instance;
-        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost()))
-        {
-            return false;
-        }
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost())) return false;
 
         level++;
         ApplyLevelStats();
@@ -80,10 +59,7 @@ public class Tower : MonoBehaviour, ITower
 
     private void CacheBaseStats()
     {
-        if (statsCached)
-        {
-            return;
-        }
+        if (statsCached) return;
 
         baseRange = range;
         baseFireRate = fireRate;
@@ -108,30 +84,36 @@ public class Tower : MonoBehaviour, ITower
         fireCooldown -= Time.deltaTime;
     }
 
-    private GameObject FindNearestEnemy()
+    private GameObject FindTarget()
     {
         List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
-
-        GameObject nearest = null;
-        float shortestDistance = Mathf.Infinity;
+        GameObject best = null;
+        float bestValue = targetMode == TargetMode.Nearest ? Mathf.Infinity : -Mathf.Infinity;
 
         for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            EnemyHealth enemyHealth = enemies[i];
-            if (enemyHealth == null || enemyHealth.IsDead)
-            {
-                continue;
-            }
+            EnemyHealth eh = enemies[i];
+            if (eh == null || eh.IsDead) continue;
 
-            float distance = Vector3.Distance(transform.position, enemyHealth.transform.position);
-            if (distance < shortestDistance && distance <= range)
+            float dist = Vector3.Distance(transform.position, eh.transform.position);
+            if (dist > range) continue;
+
+            switch (targetMode)
             {
-                shortestDistance = distance;
-                nearest = enemyHealth.gameObject;
+                case TargetMode.First:
+                    float progress = eh.Movement != null ? eh.Movement.GetPathProgress() : 0f;
+                    if (progress > bestValue) { bestValue = progress; best = eh.gameObject; }
+                    break;
+                case TargetMode.Strongest:
+                    if (eh.currentHealth > bestValue) { bestValue = eh.currentHealth; best = eh.gameObject; }
+                    break;
+                default:
+                    if (dist < bestValue) { bestValue = dist; best = eh.gameObject; }
+                    break;
             }
         }
 
-        return nearest;
+        return best;
     }
 
     private void RotateToward(Transform target)
@@ -140,17 +122,12 @@ public class Tower : MonoBehaviour, ITower
         lookDirection.y = 0f;
 
         if (lookDirection != Vector3.zero)
-        {
             transform.rotation = Quaternion.LookRotation(lookDirection);
-        }
     }
 
     private void TryShoot(Transform target)
     {
-        if (fireCooldown > 0f)
-        {
-            return;
-        }
+        if (fireCooldown > 0f) return;
 
         Shoot(target);
         fireCooldown = 1f / fireRate;
@@ -160,20 +137,20 @@ public class Tower : MonoBehaviour, ITower
     {
         if (firePoint == null)
         {
-            Debug.LogError("Tower: firePoint atanmadi.");
+            Debug.LogError("Tower: firePoint not assigned.");
             return;
         }
 
         if (ProjectilePool.Instance == null)
         {
-            Debug.LogError("Tower: ProjectilePool sahnede bulunamadi.");
+            Debug.LogError("Tower: ProjectilePool not found in scene.");
             return;
         }
 
         GameObject projectileObject = ProjectilePool.Instance.GetProjectile();
         if (projectileObject == null)
         {
-            Debug.LogError("Tower: Pool'dan projectile alinamadi.");
+            Debug.LogError("Tower: Failed to get projectile from pool.");
             return;
         }
 
@@ -183,7 +160,7 @@ public class Tower : MonoBehaviour, ITower
         Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("Projectile objesinde Projectile scripti yok.");
+            Debug.LogError("Projectile object is missing the Projectile script.");
             return;
         }
 
@@ -197,4 +174,3 @@ public class Tower : MonoBehaviour, ITower
         Gizmos.DrawWireSphere(transform.position, range);
     }
 }
-

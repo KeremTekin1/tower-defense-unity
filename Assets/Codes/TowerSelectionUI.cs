@@ -22,28 +22,19 @@ public class TowerSelectionUI : MonoBehaviour
 
     private void Update()
     {
-        if (panelRect == null)
-        {
-            return;
-        }
+        if (panelRect == null) return;
 
         bool pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         Transform hoveredTower = pointerOverUi ? null : GetHoveredTower();
 
         if (!pointerOverUi && Input.GetMouseButtonDown(0))
-        {
             selectedTower = hoveredTower;
-        }
-
-        if (selectedTower != null && selectedTower.gameObject == null)
-        {
-            selectedTower = null;
-        }
 
         if (selectedTower != null && Input.GetKeyDown(KeyCode.U))
-        {
             TryUpgradeSelectedTower();
-        }
+
+        if (selectedTower != null && Input.GetKeyDown(KeyCode.T))
+            CycleTargetMode(selectedTower);
 
         Transform displayTower = selectedTower != null ? selectedTower : hoveredTower;
         UpdatePanel(displayTower);
@@ -52,56 +43,32 @@ public class TowerSelectionUI : MonoBehaviour
     private Transform GetHoveredTower()
     {
         Camera mainCamera = Camera.main;
-        if (mainCamera == null)
-        {
-            return null;
-        }
+        if (mainCamera == null) return null;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (!Physics.Raycast(ray, out RaycastHit hitInfo, 1000f))
-        {
-            return null;
-        }
+        if (!Physics.Raycast(ray, out RaycastHit hitInfo, 1000f)) return null;
 
         return ResolveTowerRoot(hitInfo.collider.transform);
     }
 
     private Transform ResolveTowerRoot(Transform hitTransform)
     {
-        if (hitTransform == null)
-        {
-            return null;
-        }
+        if (hitTransform == null) return null;
 
         Tower basicTower = hitTransform.GetComponentInParent<Tower>();
-        if (basicTower != null)
-        {
-            return basicTower.transform;
-        }
+        if (basicTower != null) return basicTower.transform;
 
         MissileTower missileTower = hitTransform.GetComponentInParent<MissileTower>();
-        if (missileTower != null)
-        {
-            return missileTower.transform;
-        }
+        if (missileTower != null) return missileTower.transform;
 
         SlowTower slowTower = hitTransform.GetComponentInParent<SlowTower>();
-        if (slowTower != null)
-        {
-            return slowTower.transform;
-        }
+        if (slowTower != null) return slowTower.transform;
 
         FireTower fireTower = hitTransform.GetComponentInParent<FireTower>();
-        if (fireTower != null)
-        {
-            return fireTower.transform;
-        }
+        if (fireTower != null) return fireTower.transform;
 
         FlamethrowerTower flamethrowerTower = hitTransform.GetComponentInParent<FlamethrowerTower>();
-        if (flamethrowerTower != null)
-        {
-            return flamethrowerTower.transform;
-        }
+        if (flamethrowerTower != null) return flamethrowerTower.transform;
 
         return null;
     }
@@ -111,7 +78,7 @@ public class TowerSelectionUI : MonoBehaviour
         if (displayTower == null)
         {
             titleText.text = "TOWER INFO";
-            bodyText.text = "Hover to inspect.\nClick to pin.\nPress U or use the button to upgrade.";
+            bodyText.text = "Hover to inspect.\nClick to pin.\nU: upgrade  |  T: target mode";
             UpdateUpgradeControls(null);
             return;
         }
@@ -123,10 +90,7 @@ public class TowerSelectionUI : MonoBehaviour
 
     private void UpdateUpgradeControls(Transform upgradableTower)
     {
-        if (upgradeButton == null || upgradeButtonText == null || upgradeHintText == null)
-        {
-            return;
-        }
+        if (upgradeButton == null || upgradeButtonText == null || upgradeHintText == null) return;
 
         if (upgradableTower == null)
         {
@@ -140,6 +104,7 @@ public class TowerSelectionUI : MonoBehaviour
         bool canUpgrade = CanTowerUpgrade(upgradableTower);
         int cost = GetTowerUpgradeCost(upgradableTower);
         bool hasMoney = GameManager.Instance != null && GameManager.Instance.money >= cost;
+        bool hasTargetMode = HasTargetModeSupport(upgradableTower);
 
         upgradeButton.interactable = canUpgrade && hasMoney;
 
@@ -151,27 +116,35 @@ public class TowerSelectionUI : MonoBehaviour
         }
 
         upgradeButtonText.text = "UPGRADE\n$" + cost;
+        string modeHint = hasTargetMode ? "  |  T: mode" : "";
+
         if (hasMoney)
-        {
-            upgradeHintText.text = "Level " + level + " -> " + (level + 1) + "   Press U or click.";
-        }
+            upgradeHintText.text = "Level " + level + " -> " + (level + 1) + "   Press U" + modeHint + ".";
         else
-        {
             upgradeHintText.text = "Need $" + cost + " to reach level " + (level + 1) + ".";
-        }
     }
 
     private void TryUpgradeSelectedTower()
     {
-        if (selectedTower == null)
-        {
-            return;
-        }
+        if (selectedTower == null) return;
 
         if (TryUpgradeTower(selectedTower))
-        {
             UpdatePanel(selectedTower);
-        }
+    }
+
+    private void CycleTargetMode(Transform towerTransform)
+    {
+        Tower t = towerTransform.GetComponent<Tower>();
+        if (t != null) { t.targetMode = (TargetMode)(((int)t.targetMode + 1) % 3); return; }
+
+        MissileTower m = towerTransform.GetComponent<MissileTower>();
+        if (m != null) m.targetMode = (TargetMode)(((int)m.targetMode + 1) % 3);
+    }
+
+    private bool HasTargetModeSupport(Transform towerTransform)
+    {
+        return towerTransform != null &&
+               (towerTransform.GetComponent<Tower>() != null || towerTransform.GetComponent<MissileTower>() != null);
     }
 
     private string BuildTowerDescription(Transform towerTransform)
@@ -183,6 +156,7 @@ public class TowerSelectionUI : MonoBehaviour
                    "Range:   " + basicTower.range.ToString("0.0") + "\n" +
                    "Rate:      " + basicTower.fireRate.ToString("0.0") + "/s\n" +
                    "Damage: " + basicTower.damage.ToString("0") + "\n" +
+                   "Mode:    " + basicTower.targetMode + "  (T)\n" +
                    "Next:     $" + BuildNextCostText(basicTower.CanUpgrade(), basicTower.GetUpgradeCost()) + "\n" +
                    "Role:      Precise single target";
         }
@@ -195,6 +169,7 @@ public class TowerSelectionUI : MonoBehaviour
                    "Range:   " + missileTower.range.ToString("0.0") + "\n" +
                    "Rate:      " + missileTower.fireRate.ToString("0.0") + "/s\n" +
                    "Damage: " + missileTower.damage.ToString("0") + "\n" +
+                   "Mode:    " + missileTower.targetMode + "  (T)\n" +
                    "Next:     $" + BuildNextCostText(missileTower.CanUpgrade(), missileTower.GetUpgradeCost()) + "\n" +
                    "Role:      " + role;
         }
@@ -204,7 +179,7 @@ public class TowerSelectionUI : MonoBehaviour
         {
             return "FREEZE TOWER  L" + slowTower.Level + "\n" +
                    "Range:   " + slowTower.range.ToString("0.0") + "\n" +
-                   "Arc:       " + slowTower.coneAngle.ToString("0") + "\u00B0\n" +
+                   "Arc:       " + slowTower.coneAngle.ToString("0") + "°\n" +
                    "Slow:      " + ((1f - slowTower.slowMultiplier) * 100f).ToString("0") + "%\n" +
                    "Duration:" + slowTower.slowDuration.ToString("0.0") + "s\n" +
                    "Next:     $" + BuildNextCostText(slowTower.CanUpgrade(), slowTower.GetUpgradeCost());
@@ -215,7 +190,7 @@ public class TowerSelectionUI : MonoBehaviour
         {
             return "FIRE TOWER  L" + fireTower.Level + "\n" +
                    "Range:   " + fireTower.range.ToString("0.0") + "\n" +
-                   "Arc:       " + fireTower.angle.ToString("0") + "\u00B0\n" +
+                   "Arc:       " + fireTower.angle.ToString("0") + "°\n" +
                    "DPS:      " + fireTower.damagePerSecond.ToString("0") + "\n" +
                    "Next:     $" + BuildNextCostText(fireTower.CanUpgrade(), fireTower.GetUpgradeCost()) + "\n" +
                    "Role:      Directional area burn";
@@ -224,10 +199,12 @@ public class TowerSelectionUI : MonoBehaviour
         FlamethrowerTower flamethrowerTower = towerTransform.GetComponent<FlamethrowerTower>();
         if (flamethrowerTower != null)
         {
-            return "FLAMETHROWER\n" +
-                   "Range: " + flamethrowerTower.range.ToString("0.0") + "\n" +
-                   "DPS: " + flamethrowerTower.damagePerSecond.ToString("0") + "\n" +
-                   "Role: Tracking flame zone";
+            return "FLAMETHROWER  L" + flamethrowerTower.Level + "\n" +
+                   "Range:   " + flamethrowerTower.range.ToString("0.0") + "\n" +
+                   "DPS:      " + flamethrowerTower.damagePerSecond.ToString("0") + "\n" +
+                   "Zone:    " + flamethrowerTower.zoneLength.ToString("0.0") + "m\n" +
+                   "Next:     $" + BuildNextCostText(flamethrowerTower.CanUpgrade(), flamethrowerTower.GetUpgradeCost()) + "\n" +
+                   "Role:      Tracking flame zone";
         }
 
         return towerTransform.name.ToUpperInvariant();
@@ -246,46 +223,27 @@ public class TowerSelectionUI : MonoBehaviour
     private int GetTowerLevel(Transform towerTransform)
     {
         ITower tower = GetTower(towerTransform);
-        if (tower != null)
-        {
-            return tower.Level;
-        }
-
-        return 1;
+        return tower != null ? tower.Level : 1;
     }
 
     private int GetTowerUpgradeCost(Transform towerTransform)
     {
         ITower tower = GetTower(towerTransform);
-        if (tower != null)
-        {
-            return tower.GetUpgradeCost();
-        }
-
-        return 0;
+        return tower != null ? tower.GetUpgradeCost() : 0;
     }
 
     private bool CanTowerUpgrade(Transform towerTransform)
     {
         ITower tower = GetTower(towerTransform);
-        if (tower != null)
-        {
-            return tower.CanUpgrade();
-        }
-
-        return false;
+        return tower != null && tower.CanUpgrade();
     }
 
     private bool TryUpgradeTower(Transform towerTransform)
     {
         ITower tower = GetTower(towerTransform);
-        if (tower != null)
-        {
-            return tower.TryUpgrade();
-        }
-
-        return false;
+        return tower != null && tower.TryUpgrade();
     }
+
     private void BuildPanel()
     {
         EnsureEventSystem();
@@ -297,7 +255,7 @@ public class TowerSelectionUI : MonoBehaviour
         panelRect.anchorMin = new Vector2(1f, 0f);
         panelRect.anchorMax = new Vector2(1f, 0f);
         panelRect.pivot = new Vector2(1f, 0f);
-        panelRect.sizeDelta = new Vector2(390f, 360f);
+        panelRect.sizeDelta = new Vector2(390f, 380f);
         panelRect.anchoredPosition = new Vector2(-28f, 28f);
 
         Image panelImage = panelObject.AddComponent<Image>();
@@ -384,10 +342,7 @@ public class TowerSelectionUI : MonoBehaviour
 
     private void EnsureEventSystem()
     {
-        if (FindFirstObjectByType<EventSystem>() != null)
-        {
-            return;
-        }
+        if (FindFirstObjectByType<EventSystem>() != null) return;
 
         GameObject eventSystemObject = new GameObject("RuntimeEventSystem");
         eventSystemObject.AddComponent<EventSystem>();
@@ -397,10 +352,7 @@ public class TowerSelectionUI : MonoBehaviour
     private Canvas FindOrCreateCanvas()
     {
         Canvas existingCanvas = GameObject.Find("TowerInfoCanvas")?.GetComponent<Canvas>();
-        if (existingCanvas != null)
-        {
-            return existingCanvas;
-        }
+        if (existingCanvas != null) return existingCanvas;
 
         GameObject canvasObject = new GameObject("TowerInfoCanvas");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -421,10 +373,7 @@ public class TowerSelectionUI : MonoBehaviour
     private TMP_FontAsset ResolveFontAsset()
     {
         TMP_Text existingText = FindFirstObjectByType<TMP_Text>();
-        if (existingText != null)
-        {
-            return existingText.font;
-        }
+        if (existingText != null) return existingText.font;
 
         return TMP_Settings.defaultFontAsset;
     }
@@ -437,6 +386,3 @@ public class TowerSelectionUI : MonoBehaviour
         return uiObject;
     }
 }
-
-
-

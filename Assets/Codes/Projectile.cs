@@ -7,7 +7,6 @@ public class Projectile : MonoBehaviour
 
     private Transform target;
 
-    // Called by the pool or tower before enabling the object
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
@@ -30,34 +29,26 @@ public class Projectile : MonoBehaviour
         transform.LookAt(target);
 
         if (Vector3.Distance(transform.position, target.position) < 0.2f)
-        {
             HitTarget();
-        }
     }
 
-    void HitTarget()
+    private void HitTarget()
     {
         if (target != null)
         {
             EnemyHealth health = target.GetComponent<EnemyHealth>();
             if (health != null)
-            {
                 health.TakeDamage(damage);
-            }
         }
 
         ReturnToPool();
     }
 
-    void ReturnToPool()
+    private void ReturnToPool()
     {
         if (ProjectilePool.Instance != null)
-        {
             ProjectilePool.Instance.ReturnProjectile(gameObject);
-        }
         else
-        {
             Destroy(gameObject);
-        }
     }
 }

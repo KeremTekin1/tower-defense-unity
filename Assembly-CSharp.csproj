@@ -61,15 +61,26 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.54f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\EnemyHealth.cs" />
-    <Compile Include="Assets\MissileTower.cs" />
-    <Compile Include="Assets\Tower.cs" />
+    <Compile Include="Assets\Codes\FireTower.cs" />
+    <Compile Include="Assets\Codes\Tower.cs" />
+    <Compile Include="Assets\Codes\EnemyHealth.cs" />
+    <Compile Include="Assets\Codes\ITower.cs" />
+    <Compile Include="Assets\Codes\FlameZone.cs" />
+    <Compile Include="Assets\Codes\EnemyMovement.cs" />
+    <Compile Include="Assets\Codes\MissileProjectile.cs" />
+    <Compile Include="Assets\Codes\TowerSelectionUI.cs" />
+    <Compile Include="Assets\Codes\Projectilepool.cs" />
+    <Compile Include="Assets\Codes\WavePanelUI.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
-    <Compile Include="Assets\GameManager.cs" />
-    <Compile Include="Assets\EnemyMovement.cs" />
-    <Compile Include="Assets\Projectile.cs" />
-    <Compile Include="Assets\MissileProjectile.cs" />
-    <Compile Include="Assets\WaveSpawner.cs" />
+    <Compile Include="Assets\Codes\EnemyStatusVfx.cs" />
+    <Compile Include="Assets\Codes\FlamethrowerTower.cs" />
+    <Compile Include="Assets\Codes\SlowTower.cs" />
+    <Compile Include="Assets\Codes\EnemyData.cs" />
+    <Compile Include="Assets\Codes\WaveSpawner.cs" />
+    <Compile Include="Assets\Codes\GameManager.cs" />
+    <Compile Include="Assets\Codes\Projectile.cs" />
+    <Compile Include="Assets\Codes\MissileTower.cs" />
+    <Compile Include="Assets\Codes\EnemyHealthBar.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />

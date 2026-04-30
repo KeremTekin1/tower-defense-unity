@@ -56,40 +56,21 @@ public class SlowTower : MonoBehaviour, ITower
         TryShoot();
     }
 
-    public bool CanUpgrade()
-    {
-        return level < 3;
-    }
+    public bool CanUpgrade() => level < 3;
 
     public int GetUpgradeCost()
     {
-        if (level == 1)
-        {
-            return 50;
-        }
-
-        if (level == 2)
-        {
-            return 90;
-        }
-
+        if (level == 1) return 50;
+        if (level == 2) return 90;
         return 0;
     }
 
     public bool TryUpgrade()
     {
-        CacheBaseStats();
-
-        if (!CanUpgrade())
-        {
-            return false;
-        }
+        if (!CanUpgrade()) return false;
 
         GameManager gameManager = GameManager.Instance;
-        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost()))
-        {
-            return false;
-        }
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost())) return false;
 
         level++;
         ApplyLevelStats();
@@ -99,10 +80,7 @@ public class SlowTower : MonoBehaviour, ITower
 
     private void CacheBaseStats()
     {
-        if (statsCached)
-        {
-            return;
-        }
+        if (statsCached) return;
 
         baseRange = range;
         baseFireRate = fireRate;
@@ -132,15 +110,8 @@ public class SlowTower : MonoBehaviour, ITower
 
     private void TryShoot()
     {
-        if (fireCooldown > 0f)
-        {
-            return;
-        }
-
-        if (!HasEnemyInCone())
-        {
-            return;
-        }
+        if (fireCooldown > 0f) return;
+        if (!HasEnemyInCone()) return;
 
         ApplyConeEffect();
         fireCooldown = 1f / fireRate;
@@ -152,11 +123,9 @@ public class SlowTower : MonoBehaviour, ITower
 
         for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            EnemyHealth enemyHealth = enemies[i];
-            if (enemyHealth != null && !enemyHealth.IsDead && IsInsideCone(enemyHealth.transform.position))
-            {
+            EnemyHealth eh = enemies[i];
+            if (eh != null && !eh.IsDead && IsInsideCone(eh.transform.position))
                 return true;
-            }
         }
 
         return false;
@@ -168,17 +137,14 @@ public class SlowTower : MonoBehaviour, ITower
 
         for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            EnemyHealth enemyHealth = enemies[i];
-            if (enemyHealth == null || enemyHealth.IsDead || !IsInsideCone(enemyHealth.transform.position))
-            {
-                continue;
-            }
+            EnemyHealth eh = enemies[i];
+            if (eh == null || eh.IsDead || !IsInsideCone(eh.transform.position)) continue;
 
-            EnemyMovement movement = enemyHealth.GetComponent<EnemyMovement>();
+            EnemyMovement movement = eh.GetComponent<EnemyMovement>();
             if (movement != null)
             {
                 movement.ApplySlow(slowMultiplier, slowDuration);
-                enemyHealth.PlaySlowFeedback();
+                eh.PlaySlowFeedback();
             }
         }
     }
@@ -188,10 +154,7 @@ public class SlowTower : MonoBehaviour, ITower
         Vector3 directionToTarget = targetPosition - transform.position;
         directionToTarget.y = 0f;
 
-        if (directionToTarget.sqrMagnitude > range * range)
-        {
-            return false;
-        }
+        if (directionToTarget.sqrMagnitude > range * range) return false;
 
         float angleToTarget = Vector3.Angle(transform.forward, directionToTarget.normalized);
         return angleToTarget <= coneAngle * 0.5f;
@@ -200,91 +163,26 @@ public class SlowTower : MonoBehaviour, ITower
     private void CreateAreaVisual()
     {
         Transform existingVisual = transform.Find("SlowAreaVisual");
-        GameObject visualObject;
+        GameObject visualObject = existingVisual != null
+            ? existingVisual.gameObject
+            : new GameObject("SlowAreaVisual");
 
-        if (existingVisual != null)
-        {
-            visualObject = existingVisual.gameObject;
-        }
-        else
-        {
-            visualObject = new GameObject("SlowAreaVisual");
-            visualObject.transform.SetParent(transform, false);
-        }
-
+        visualObject.transform.SetParent(transform, false);
         visualObject.transform.localPosition = new Vector3(0f, 0.03f, 0f);
         visualObject.transform.localRotation = Quaternion.identity;
 
-        areaMeshFilter = visualObject.GetComponent<MeshFilter>();
-        if (areaMeshFilter == null)
-        {
-            areaMeshFilter = visualObject.AddComponent<MeshFilter>();
-        }
-
-        areaMeshRenderer = visualObject.GetComponent<MeshRenderer>();
-        if (areaMeshRenderer == null)
-        {
-            areaMeshRenderer = visualObject.AddComponent<MeshRenderer>();
-        }
+        areaMeshFilter = visualObject.GetComponent<MeshFilter>() ?? visualObject.AddComponent<MeshFilter>();
+        areaMeshRenderer = visualObject.GetComponent<MeshRenderer>() ?? visualObject.AddComponent<MeshRenderer>();
 
         if (areaMesh == null)
         {
-            areaMesh = new Mesh();
-            areaMesh.name = "SlowAreaMesh";
+            areaMesh = new Mesh { name = "SlowAreaMesh" };
         }
 
         areaMeshFilter.sharedMesh = areaMesh;
 
         if (areaMeshRenderer.sharedMaterial == null)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null)
-            {
-                shader = Shader.Find("Unlit/Color");
-            }
-
-            if (shader == null)
-            {
-                shader = Shader.Find("Standard");
-            }
-
-            Material material = new Material(shader);
-            Color slowColor = new Color(0.2f, 0.7f, 1f, 0.3f);
-            material.color = slowColor;
-
-            if (material.HasProperty("_BaseColor"))
-            {
-                material.SetColor("_BaseColor", slowColor);
-            }
-
-            if (material.HasProperty("_Surface"))
-            {
-                material.SetFloat("_Surface", 1f);
-            }
-
-            if (material.HasProperty("_Blend"))
-            {
-                material.SetFloat("_Blend", 0f);
-            }
-
-            if (material.HasProperty("_SrcBlend"))
-            {
-                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            }
-
-            if (material.HasProperty("_DstBlend"))
-            {
-                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            }
-
-            if (material.HasProperty("_ZWrite"))
-            {
-                material.SetFloat("_ZWrite", 0f);
-            }
-
-            material.renderQueue = 3000;
-            areaMeshRenderer.sharedMaterial = material;
-        }
+            areaMeshRenderer.sharedMaterial = TowerVisualHelper.CreateTransparentMaterial(new Color(0.2f, 0.7f, 1f, 0.3f));
 
         areaMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         areaMeshRenderer.receiveShadows = false;
@@ -292,10 +190,7 @@ public class SlowTower : MonoBehaviour, ITower
 
     private void UpdateAreaVisual()
     {
-        if (areaMeshFilter == null || areaMesh == null)
-        {
-            return;
-        }
+        if (areaMeshFilter == null || areaMesh == null) return;
 
         Vector3[] vertices = new Vector3[visualSegments + 2];
         int[] triangles = new int[visualSegments * 3];
@@ -343,4 +238,3 @@ public class SlowTower : MonoBehaviour, ITower
         Gizmos.DrawLine(transform.position, transform.position + rightBoundary);
     }
 }
-

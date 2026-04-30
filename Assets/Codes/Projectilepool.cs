@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ProjectilePool : MonoBehaviour
@@ -33,7 +33,7 @@ public class ProjectilePool : MonoBehaviour
     {
         if (projectilePrefab == null)
         {
-            Debug.LogError("ProjectilePool: projectile prefab atanmadi.");
+            Debug.LogError("ProjectilePool: projectilePrefab not assigned.");
             return null;
         }
 
@@ -49,7 +49,7 @@ public class ProjectilePool : MonoBehaviour
     {
         if (missilePrefab == null)
         {
-            Debug.LogError("ProjectilePool: missile prefab atanmadi.");
+            Debug.LogError("ProjectilePool: missilePrefab not assigned.");
             return null;
         }
 
@@ -63,10 +63,7 @@ public class ProjectilePool : MonoBehaviour
 
     private void InitializePool(GameObject prefab, Queue<GameObject> pool, int size)
     {
-        if (prefab == null)
-        {
-            return;
-        }
+        if (prefab == null) return;
 
         for (int i = 0; i < size; i++)
         {
@@ -81,10 +78,7 @@ public class ProjectilePool : MonoBehaviour
         while (pool.Count > 0)
         {
             GameObject obj = pool.Dequeue();
-            if (obj == null)
-            {
-                continue;
-            }
+            if (obj == null) continue;
 
             obj.transform.SetParent(null);
             obj.SetActive(true);
@@ -97,10 +91,7 @@ public class ProjectilePool : MonoBehaviour
 
     private void ReturnToPool(GameObject obj, Queue<GameObject> pool)
     {
-        if (obj == null)
-        {
-            return;
-        }
+        if (obj == null) return;
 
         obj.SetActive(false);
         obj.transform.SetParent(transform);

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FlamethrowerTower : MonoBehaviour
+public class FlamethrowerTower : MonoBehaviour, ITower
 {
     public float range = 6f;
     public float damagePerSecond = 45f;
@@ -11,10 +11,19 @@ public class FlamethrowerTower : MonoBehaviour
 
     private FlameZone flameZone;
     private Renderer zoneRenderer;
+    private bool statsCached;
+    private float baseRange;
+    private float baseDamagePerSecond;
+    private float baseZoneLength;
+    private int level = 1;
+
+    public int Level => level;
 
     private void Awake()
     {
+        CacheBaseStats();
         CreateFlameZone();
+        ApplyLevelStats();
     }
 
     private void Update()
@@ -30,25 +39,66 @@ public class FlamethrowerTower : MonoBehaviour
         SetZoneActive(true);
     }
 
+    public bool CanUpgrade() => level < 3;
+
+    public int GetUpgradeCost()
+    {
+        if (level == 1) return 55;
+        if (level == 2) return 95;
+        return 0;
+    }
+
+    public bool TryUpgrade()
+    {
+        if (!CanUpgrade()) return false;
+
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null || !gameManager.SpendMoney(GetUpgradeCost())) return false;
+
+        level++;
+        ApplyLevelStats();
+        UpdateFlameZoneSize();
+        return true;
+    }
+
+    private void CacheBaseStats()
+    {
+        if (statsCached) return;
+
+        baseRange = range;
+        baseDamagePerSecond = damagePerSecond;
+        baseZoneLength = zoneLength;
+        statsCached = true;
+    }
+
+    private void ApplyLevelStats()
+    {
+        float[] rangeMultipliers = { 1f, 1.1f, 1.22f };
+        float[] damageMultipliers = { 1f, 1.5f, 2.2f };
+        float[] zoneLengthMultipliers = { 1f, 1.2f, 1.45f };
+
+        int index = Mathf.Clamp(level - 1, 0, 2);
+        range = baseRange * rangeMultipliers[index];
+        damagePerSecond = baseDamagePerSecond * damageMultipliers[index];
+        zoneLength = baseZoneLength * zoneLengthMultipliers[index];
+    }
+
     private GameObject FindNearestEnemy()
     {
         List<EnemyHealth> enemies = WaveSpawner.ActiveEnemies;
-
         GameObject nearest = null;
         float shortestDistance = Mathf.Infinity;
 
-        foreach (EnemyHealth enemyHealth in enemies)
+        for (int i = enemies.Count - 1; i >= 0; i--)
         {
-            if (enemyHealth == null)
-            {
-                continue;
-            }
+            EnemyHealth eh = enemies[i];
+            if (eh == null || eh.IsDead) continue;
 
-            float distance = Vector3.Distance(transform.position, enemyHealth.transform.position);
+            float distance = Vector3.Distance(transform.position, eh.transform.position);
             if (distance < shortestDistance && distance <= range)
             {
                 shortestDistance = distance;
-                nearest = enemyHealth.gameObject;
+                nearest = eh.gameObject;
             }
         }
 
@@ -61,9 +111,7 @@ public class FlamethrowerTower : MonoBehaviour
         lookDirection.y = 0f;
 
         if (lookDirection != Vector3.zero)
-        {
             transform.rotation = Quaternion.LookRotation(lookDirection);
-        }
     }
 
     private void CreateFlameZone()
@@ -76,58 +124,14 @@ public class FlamethrowerTower : MonoBehaviour
         visualObject.transform.localScale = new Vector3(zoneWidth, zoneLength, 1f);
 
         Collider visualCollider = visualObject.GetComponent<Collider>();
-        if (visualCollider != null)
-        {
-            Destroy(visualCollider);
-        }
+        if (visualCollider != null) Destroy(visualCollider);
 
         zoneRenderer = visualObject.GetComponent<Renderer>();
         if (zoneRenderer != null)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null)
-            {
-                shader = Shader.Find("Unlit/Color");
-            }
-            if (shader == null)
-            {
-                shader = Shader.Find("Standard");
-            }
-
-            Material material = new Material(shader);
-            Color zoneColor = new Color(1f, 0.45f, 0.1f, 0.3f);
-
-            if (material.HasProperty("_BaseColor"))
-            {
-                material.SetColor("_BaseColor", zoneColor);
-            }
-            if (material.HasProperty("_Color"))
-            {
-                material.SetColor("_Color", zoneColor);
-            }
-            if (material.HasProperty("_Surface"))
-            {
-                material.SetFloat("_Surface", 1f);
-            }
-            if (material.HasProperty("_Blend"))
-            {
-                material.SetFloat("_Blend", 0f);
-            }
-            if (material.HasProperty("_SrcBlend"))
-            {
-                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            }
-            if (material.HasProperty("_DstBlend"))
-            {
-                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            }
-            if (material.HasProperty("_ZWrite"))
-            {
-                material.SetFloat("_ZWrite", 0f);
-            }
-
-            material.renderQueue = 3000;
-            zoneRenderer.material = material;
+            zoneRenderer.material = TowerVisualHelper.CreateTransparentMaterial(new Color(1f, 0.45f, 0.1f, 0.3f));
+            zoneRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            zoneRenderer.receiveShadows = false;
             zoneRenderer.enabled = false;
         }
 
@@ -149,20 +153,35 @@ public class FlamethrowerTower : MonoBehaviour
         flameZone.SetActiveState(false);
     }
 
+    private void UpdateFlameZoneSize()
+    {
+        if (flameZone == null) return;
+
+        Transform visual = transform.Find("FlameZoneVisual");
+        if (visual != null)
+        {
+            visual.localPosition = new Vector3(0f, 0.02f, zoneLength * 0.5f);
+            visual.localScale = new Vector3(zoneWidth, zoneLength, 1f);
+        }
+
+        Transform trigger = transform.Find("FlameZoneTrigger");
+        if (trigger != null)
+        {
+            trigger.localPosition = new Vector3(0f, zoneHeight * 0.5f, zoneLength * 0.5f);
+            BoxCollider bc = trigger.GetComponent<BoxCollider>();
+            if (bc != null) bc.size = new Vector3(zoneWidth, zoneHeight, zoneLength);
+        }
+    }
+
     private void SetZoneActive(bool isActive)
     {
-        if (flameZone == null)
-        {
-            return;
-        }
+        if (flameZone == null) return;
 
         flameZone.damagePerSecond = damagePerSecond;
         flameZone.SetActiveState(isActive);
 
         if (zoneRenderer != null)
-        {
             zoneRenderer.enabled = isActive;
-        }
     }
 
     private void OnDrawGizmosSelected()

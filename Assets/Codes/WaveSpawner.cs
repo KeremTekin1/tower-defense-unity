@@ -44,24 +44,30 @@ public class WaveSpawner : MonoBehaviour
 
         if (enemyPrefab == null)
         {
-            Debug.LogError("WaveSpawner: enemyPrefab atanmadý.");
+            Debug.LogError("WaveSpawner: enemyPrefab not assigned.");
             return;
         }
 
         if (spawnPoint == null)
         {
-            Debug.LogError("WaveSpawner: spawnPoint atanmadý.");
+            Debug.LogError("WaveSpawner: spawnPoint not assigned.");
             return;
         }
 
         if (waypoints == null || waypoints.Length == 0)
         {
-            Debug.LogError("WaveSpawner: waypoints boþ.");
+            Debug.LogError("WaveSpawner: waypoints array is empty.");
             return;
         }
 
         nextWaveEnemyTypes = GenerateWaveEnemyTypes(1);
         StartCoroutine(WaveRoutine());
+    }
+
+    private void Update()
+    {
+        if (nextWaveCountdown > 0.1f && Input.GetKeyDown(KeyCode.Space))
+            nextWaveCountdown = 0f;
     }
 
     private IEnumerator WaveRoutine()
@@ -74,8 +80,6 @@ public class WaveSpawner : MonoBehaviour
             int[] currentWaveEnemyTypes = nextWaveEnemyTypes;
             nextWaveEnemyTypes = GenerateWaveEnemyTypes(currentWave + 1);
 
-            Debug.Log("Wave baþladý: " + currentWave + " | Enemy sayýsý: " + currentWaveEnemyTypes.Length);
-
             for (int i = 0; i < currentWaveEnemyTypes.Length; i++)
             {
                 SpawnEnemy(currentWaveEnemyTypes[i]);
@@ -83,11 +87,10 @@ public class WaveSpawner : MonoBehaviour
             }
 
             while (aliveEnemies > 0)
-            {
                 yield return null;
-            }
 
-            if (WavePanelUI.Instance != null) WavePanelUI.Instance.ShowWaveComplete(1.8f);
+            if (WavePanelUI.Instance != null)
+                WavePanelUI.Instance.ShowWaveComplete(1.8f);
 
             if (currentWave >= maxWavesLevel1)
             {
@@ -114,14 +117,10 @@ public class WaveSpawner : MonoBehaviour
         int[] generatedEnemyTypes = new int[enemyCount];
 
         for (int i = 0; i < enemyCount; i++)
-        {
             generatedEnemyTypes[i] = Random.Range(0, 3);
-        }
 
         if (waveNumber >= 3 && enemyCount > 0 && waveNumber % 3 == 0)
-        {
             generatedEnemyTypes[enemyCount - 1] = 3;
-        }
 
         return generatedEnemyTypes;
     }
@@ -135,26 +134,20 @@ public class WaveSpawner : MonoBehaviour
     {
         GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
 
-        if (enemy == null)
-        {
-            Debug.LogError("WaveSpawner: Enemy oluþturulamadý.");
-            return;
-        }
-
         EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
         EnemyHealth health = enemy.GetComponent<EnemyHealth>();
         Renderer rend = enemy.GetComponentInChildren<Renderer>();
 
         if (movement == null)
         {
-            Debug.LogError("Enemy prefabýnda EnemyMovement yok.");
+            Debug.LogError("Enemy prefab is missing EnemyMovement component.");
             Destroy(enemy);
             return;
         }
 
         if (health == null)
         {
-            Debug.LogError("Enemy prefabýnda EnemyHealth yok.");
+            Debug.LogError("Enemy prefab is missing EnemyHealth component.");
             Destroy(enemy);
             return;
         }
@@ -163,14 +156,10 @@ public class WaveSpawner : MonoBehaviour
         movement.baseDamage = 1;
         enemy.transform.localScale = Vector3.one;
         aliveEnemies++;
-        if (health != null) ActiveEnemies.Add(health);
+        ActiveEnemies.Add(health);
 
-        EnemyData data = null;
         bool hasScriptableData = enemyTypes != null && enemyType >= 0 && enemyType < enemyTypes.Length;
-        if (hasScriptableData)
-        {
-            data = enemyTypes[enemyType];
-        }
+        EnemyData data = hasScriptableData ? enemyTypes[enemyType] : null;
 
         if (data != null)
         {
@@ -179,35 +168,9 @@ public class WaveSpawner : MonoBehaviour
             health.moneyReward = data.moneyReward;
             if (rend != null) rend.material.color = data.color;
         }
-        else if (enemyType == 0)
-        {
-            if (rend != null) rend.material.color = Color.yellow;
-            movement.speed = 9f;
-            health.maxHealth = 180f;
-            health.moneyReward = 8;
-        }
-        else if (enemyType == 1)
-        {
-            if (rend != null) rend.material.color = Color.black;
-            movement.speed = 3f;
-            health.maxHealth = 600f;
-            health.moneyReward = 20;
-        }
-        else if (enemyType == 2)
-        {
-            if (rend != null) rend.material.color = Color.red;
-            movement.speed = 5.5f;
-            health.maxHealth = 300f;
-            health.moneyReward = 12;
-        }
         else
         {
-            if (rend != null) rend.material.color = new Color(0.82f, 0.35f, 1f);
-            movement.speed = 2.4f;
-            movement.baseDamage = 8;
-            health.maxHealth = 2600f;
-            health.moneyReward = 60;
-            enemy.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
+            ApplyHardcodedEnemyType(enemyType, movement, health, rend, enemy);
         }
 
         float waveScale = 1f + (currentWave - 1) * 0.12f;
@@ -217,69 +180,75 @@ public class WaveSpawner : MonoBehaviour
         health.SetHealthToMax();
     }
 
+    private void ApplyHardcodedEnemyType(int enemyType, EnemyMovement movement, EnemyHealth health, Renderer rend, GameObject enemy)
+    {
+        switch (enemyType)
+        {
+            case 0:
+                if (rend != null) rend.material.color = Color.yellow;
+                movement.speed = 9f;
+                health.maxHealth = 180f;
+                health.moneyReward = 8;
+                break;
+            case 1:
+                if (rend != null) rend.material.color = Color.black;
+                movement.speed = 3f;
+                health.maxHealth = 600f;
+                health.moneyReward = 20;
+                break;
+            case 2:
+                if (rend != null) rend.material.color = Color.red;
+                movement.speed = 5.5f;
+                health.maxHealth = 300f;
+                health.moneyReward = 12;
+                break;
+            default:
+                if (rend != null) rend.material.color = new Color(0.82f, 0.35f, 1f);
+                movement.speed = 2.4f;
+                movement.baseDamage = 8;
+                health.maxHealth = 2600f;
+                health.moneyReward = 60;
+                enemy.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
+                break;
+        }
+    }
+
     public string GetNextWavePreviewText()
     {
         if (nextWaveEnemyTypes == null || nextWaveEnemyTypes.Length == 0)
-        {
             return "Preparing next wave...";
-        }
 
-        int fastCount = 0;
-        int tankCount = 0;
-        int basicCount = 0;
-        int godCount = 0;
+        int fastCount = 0, tankCount = 0, basicCount = 0, godCount = 0;
 
         for (int i = 0; i < nextWaveEnemyTypes.Length; i++)
         {
-            if (nextWaveEnemyTypes[i] == 0)
+            switch (nextWaveEnemyTypes[i])
             {
-                fastCount++;
-            }
-            else if (nextWaveEnemyTypes[i] == 1)
-            {
-                tankCount++;
-            }
-            else if (nextWaveEnemyTypes[i] == 2)
-            {
-                basicCount++;
-            }
-            else
-            {
-                godCount++;
+                case 0: fastCount++; break;
+                case 1: tankCount++; break;
+                case 2: basicCount++; break;
+                default: godCount++; break;
             }
         }
 
-        return "FAST  " + fastCount + "\nTANK  " + tankCount + "\nBASIC  " + basicCount + "\nGOD  " + godCount;
+        return $"FAST  {fastCount}\nTANK  {tankCount}\nBASIC  {basicCount}\nGOD  {godCount}";
     }
 
     public void EnemyRemoved()
     {
-        aliveEnemies--;
-        if (aliveEnemies < 0)
-        {
-            aliveEnemies = 0;
-        }
-
-        Debug.Log("Kalan enemy: " + aliveEnemies);
+        aliveEnemies = Mathf.Max(0, aliveEnemies - 1);
     }
 
     private void OnDrawGizmos()
     {
-        if (waypoints == null || waypoints.Length < 2)
-        {
-            return;
-        }
+        if (waypoints == null || waypoints.Length < 2) return;
 
         Gizmos.color = Color.green;
 
         for (int i = 0; i < waypoints.Length - 1; i++)
         {
             if (waypoints[i] != null && waypoints[i + 1] != null)
-            {
                 Gizmos.DrawLine(waypoints[i].position, waypoints[i + 1].position);
-            }
         }
     }
 }
-
-

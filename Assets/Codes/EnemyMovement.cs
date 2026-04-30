@@ -11,6 +11,8 @@ public class EnemyMovement : MonoBehaviour
     private float slowMultiplier = 1f;
     private float slowTimer = 0f;
 
+    public float GetPathProgress() => currentWaypointIndex;
+
     private void Update()
     {
         TickSlowEffect();
@@ -37,14 +39,10 @@ public class EnemyMovement : MonoBehaviour
         direction.y = 0f;
 
         if (direction != Vector3.zero)
-        {
             transform.rotation = Quaternion.LookRotation(direction);
-        }
 
         if (Vector3.Distance(transform.position, target.position) < 0.15f)
-        {
             currentWaypointIndex++;
-        }
     }
 
     public void ApplySlow(float multiplier, float duration)
@@ -69,7 +67,7 @@ public class EnemyMovement : MonoBehaviour
         }
     }
 
-    void ReachBase()
+    private void ReachBase()
     {
         if (reachedBase) return;
 
@@ -80,17 +78,11 @@ public class EnemyMovement : MonoBehaviour
         WaveSpawner.ActiveEnemies.Remove(GetComponent<EnemyHealth>());
 
         if (GameManager.Instance != null)
-        {
             GameManager.Instance.DamageBase(baseDamage);
-        }
 
         if (WaveSpawner.Instance != null)
-        {
             WaveSpawner.Instance.EnemyRemoved();
-        }
 
         Destroy(gameObject);
     }
 }
-
-

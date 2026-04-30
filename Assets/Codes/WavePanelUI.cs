@@ -24,15 +24,18 @@ public class WavePanelUI : MonoBehaviour
 
     private void Update()
     {
-        if (panelRect == null)
-        {
-            return;
-        }
+        if (panelRect == null) return;
 
         WaveSpawner waveSpawner = WaveSpawner.Instance;
         if (waveSpawner == null)
         {
             bodyText.text = "WAVE PANEL\nLoading...";
+            return;
+        }
+
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused)
+        {
+            bodyText.text = "<color=#FBBF24><b>PAUSED</b></color>\n\nPress ESC to resume.";
             return;
         }
 
@@ -44,7 +47,7 @@ public class WavePanelUI : MonoBehaviour
         }
 
         string timerText = waveSpawner.nextWaveCountdown > 0.1f
-            ? Mathf.CeilToInt(waveSpawner.nextWaveCountdown) + "s"
+            ? Mathf.CeilToInt(waveSpawner.nextWaveCountdown) + "s  <color=#94A3B8><size=85%>(SPACE to skip)</size></color>"
             : "LIVE";
 
         bodyText.text =
@@ -96,10 +99,7 @@ public class WavePanelUI : MonoBehaviour
     private Canvas FindOrCreateCanvas()
     {
         Canvas existingCanvas = GameObject.Find("WaveInfoCanvas")?.GetComponent<Canvas>();
-        if (existingCanvas != null)
-        {
-            return existingCanvas;
-        }
+        if (existingCanvas != null) return existingCanvas;
 
         GameObject canvasObject = new GameObject("WaveInfoCanvas");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -120,10 +120,7 @@ public class WavePanelUI : MonoBehaviour
     private TMP_FontAsset ResolveFontAsset()
     {
         TMP_Text existingText = FindFirstObjectByType<TMP_Text>();
-        if (existingText != null)
-        {
-            return existingText.font;
-        }
+        if (existingText != null) return existingText.font;
 
         return TMP_Settings.defaultFontAsset;
     }
@@ -136,4 +133,3 @@ public class WavePanelUI : MonoBehaviour
         return uiObject;
     }
 }
-

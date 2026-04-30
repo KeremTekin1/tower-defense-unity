@@ -25,6 +25,10 @@ public class GameManager : MonoBehaviour
     public GameObject gameOverPanel;
 
     private bool gameOver = false;
+    private bool isPaused = false;
+
+    public bool IsGameOver => gameOver;
+    public bool IsPaused => isPaused;
 
     private void Awake()
     {
@@ -36,19 +40,20 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         if (gameOverPanel != null)
-        {
             gameOverPanel.SetActive(false);
-        }
 
         UpdateUI();
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape) && !gameOver)
+            TogglePause();
+    }
+
     public void DamageBase(int damage)
     {
-        if (gameOver)
-        {
-            return;
-        }
+        if (gameOver) return;
 
         baseHP -= damage;
 
@@ -69,71 +74,60 @@ public class GameManager : MonoBehaviour
 
     public bool SpendMoney(int amount)
     {
-        if (money < amount)
-        {
-            return false;
-        }
+        if (money < amount) return false;
 
         money -= amount;
         UpdateUI();
         return true;
     }
 
-    private void GameOver()
-    {
-        gameOver = true;
-        Time.timeScale = 0f;
-
-        if (gameOverPanel != null)
-        {
-            gameOverPanel.SetActive(true);
-        }
-    }
-
     public void RestartLevel()
     {
         Time.timeScale = 1f;
+        isPaused = false;
         WaveSpawner.ActiveEnemies.Clear();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void TogglePause()
+    {
+        isPaused = !isPaused;
+        Time.timeScale = isPaused ? 0f : 1f;
+    }
+
+    private void GameOver()
+    {
+        gameOver = true;
+        isPaused = false;
+        Time.timeScale = 0f;
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
     }
 
     private void UpdateUI()
     {
         if (baseHpText != null)
-        {
             baseHpText.text = BuildLabel("BASE", "#7DD3FC", baseHP.ToString());
-        }
 
         if (killText != null)
-        {
             killText.text = BuildLabel("KILLS", "#FCA5A5", WaveSpawner.enemiesKilled.ToString());
-        }
 
         if (levelText != null)
-        {
             levelText.text = BuildLabel("LEVEL", "#F8FAFC", GetDisplayLevelValue());
-        }
 
         if (moneyText != null)
-        {
             moneyText.text = BuildLabel("CASH", "#FDE68A", money.ToString());
-        }
 
         if (waveSpawner != null && waveText != null)
-        {
             waveText.text = BuildLabel("WAVE", "#C4B5FD", waveSpawner.currentWave.ToString());
-        }
 
         if (waveSpawner != null && nextWaveText != null)
         {
             if (waveSpawner.nextWaveCountdown > 0.1f)
-            {
                 nextWaveText.text = BuildLabel("NEXT", "#86EFAC", Mathf.CeilToInt(waveSpawner.nextWaveCountdown) + "s");
-            }
             else
-            {
                 nextWaveText.text = string.Empty;
-            }
         }
     }
 
@@ -145,9 +139,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < sceneName.Length; i++)
         {
             if (char.IsDigit(sceneName[i]))
-            {
                 numericPart += sceneName[i];
-            }
         }
 
         return string.IsNullOrEmpty(numericPart) ? sceneName.ToUpperInvariant() : numericPart;
@@ -160,10 +152,7 @@ public class GameManager : MonoBehaviour
 
     private void EnsureRuntimeSupportObject<T>(string objectName) where T : Component
     {
-        if (FindFirstObjectByType<T>() != null)
-        {
-            return;
-        }
+        if (FindFirstObjectByType<T>() != null) return;
 
         GameObject supportObject = new GameObject(objectName);
         supportObject.AddComponent<T>();

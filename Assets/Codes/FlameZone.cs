@@ -17,26 +17,17 @@ public class FlameZone : MonoBehaviour
         isActive = active;
 
         if (zoneCollider != null)
-        {
             zoneCollider.enabled = active;
-        }
     }
 
     private void OnTriggerStay(Collider other)
     {
-        if (!isActive)
-        {
-            return;
-        }
+        if (!isActive) return;
 
         EnemyHealth health = other.GetComponentInParent<EnemyHealth>();
-        if (health == null)
-        {
-            return;
-        }
+        if (health == null || health.IsDead) return;
 
-        if (health.IsDead) return;
-
+        health.PlayFireFeedback();
         health.TakeDamage(damagePerSecond * Time.deltaTime);
     }
 }
